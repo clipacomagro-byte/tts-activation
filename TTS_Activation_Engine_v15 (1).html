@@ -1,0 +1,2934 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TTS · Activation Engine</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@500;600;700;800&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:        #060610;
+  --panel:     #0c0c1a;
+  --card:      #101020;
+  --card2:     #161628;
+  --bdr:       rgba(255,255,255,.06);
+  --bdr2:      rgba(255,255,255,.11);
+  --tx:        #eeeef8;
+  --mu:        #7777aa;
+  --mu2:       #44446a;
+  --accent:    #e83550;
+  --accent-2:  rgba(232,53,80,.12);
+  --accent-3:  rgba(232,53,80,.05);
+  --off:       rgba(119,119,170,.14);
+  --off-br:    rgba(119,119,170,.22);
+  --ok:        #22d47a;
+  --warn:      #f5a623;
+  --bad:       #ef4444;
+  --ok-bg:     rgba(34,212,122,.10);
+  --warn-bg:   rgba(245,166,35,.08);
+  --ai:        #a78bfa;
+  --ai-bg:     rgba(167,139,250,.10);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-font-smoothing: antialiased; }
+body { background: var(--bg); color: var(--tx); font-family: 'DM Sans', sans-serif; font-size: 13px; line-height: 1.5; min-height: 100vh; }
+.display { font-family: 'Syne', sans-serif; letter-spacing: -.3px; }
+.mono    { font-family: 'JetBrains Mono', monospace; }
+
+.app { display: flex; min-height: 100vh; }
+
+.sb { width: 210px; background: var(--panel); border-right: 1px solid var(--bdr); display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; flex-shrink: 0; }
+.sb-h { padding: 20px 18px; border-bottom: 1px solid var(--bdr); }
+.sb-logo { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 800; letter-spacing: -.5px; }
+.sb-logo span { color: var(--accent); }
+.sb-title { font-size: 10px; color: var(--mu); text-transform: uppercase; letter-spacing: .12em; margin-top: 4px; font-weight: 600; }
+.sb-nav { flex: 1; padding: 14px 10px; overflow-y: auto; }
+.ni { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; cursor: pointer; color: var(--mu); font-size: 12px; font-weight: 500; transition: all .15s; margin-bottom: 2px; user-select: none; }
+.ni:hover { background: rgba(255,255,255,.03); color: var(--tx); }
+.ni.active { background: var(--accent-2); color: var(--accent); }
+.ni .ic { width: 16px; font-family: 'JetBrains Mono', monospace; opacity: .7; }
+.ni .cn { margin-left: auto; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--mu2); }
+.ni.active .cn { color: var(--accent); }
+
+.sb-f { padding: 10px; border-top: 1px solid var(--bdr); display: flex; flex-direction: column; gap: 6px; }
+.sb-status { padding: 8px 11px; background: var(--card); border: 1px solid var(--bdr); border-radius: 8px; font-size: 11px; }
+.sb-status .lbl { font-family: 'Syne', sans-serif; color: var(--mu2); font-size: 9px; text-transform: uppercase; letter-spacing: .12em; margin-bottom: 3px; font-weight: 700; }
+.sb-status .val { color: var(--mu); display: flex; align-items: center; gap: 7px; font-size: 11px; }
+.dot { width: 6px; height: 6px; border-radius: 50%; background: var(--mu2); flex-shrink: 0; }
+.dot.on { background: var(--ok); box-shadow: 0 0 0 3px rgba(34,212,122,.18); }
+.dot.ai { background: var(--ai); box-shadow: 0 0 0 3px rgba(167,139,250,.18); }
+
+.main { flex: 1; min-width: 0; }
+.topbar { height: 52px; background: rgba(6,6,16,.95); backdrop-filter: blur(20px); border-bottom: 1px solid var(--bdr); padding: 0 24px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10; }
+.topbar .pt { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700; letter-spacing: -.2px; }
+.topbar .pt .sub { font-family: 'DM Sans', sans-serif; font-size: 10px; color: var(--mu2); font-weight: 400; margin-left: 10px; text-transform: uppercase; letter-spacing: .08em; }
+.topbar .tools { display: flex; gap: 8px; align-items: center; }
+
+.cnt { padding: 20px 24px 80px; max-width: 1480px; }
+
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 14px; border-radius: 7px; border: none; cursor: pointer; font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 600; transition: all .15s; letter-spacing: .02em; }
+.bp { background: var(--accent); color: #fff; }
+.bp:hover { opacity: .88; }
+.bp:disabled { opacity: .35; cursor: not-allowed; }
+.bo { background: transparent; color: var(--mu); border: 1px solid var(--bdr2); }
+.bo:hover { background: rgba(255,255,255,.04); color: var(--tx); border-color: var(--accent); }
+.bai { background: var(--ai); color: #fff; }
+.bai:hover { opacity: .88; }
+.bsm { padding: 5px 11px; font-size: 10px; border-radius: 6px; }
+.btx { background: transparent; color: var(--mu); padding: 4px 8px; border: none; border-radius: 5px; cursor: pointer; font-size: 11px; }
+.btx:hover { color: var(--bad); background: rgba(239,68,68,.08); }
+
+.page { display: none; }
+.page.active { display: block; animation: fade .2s ease; }
+@keyframes fade { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+
+.stat-strip { display: flex; gap: 0; background: var(--card); border: 1px solid var(--bdr); border-radius: 12px; margin-bottom: 16px; overflow: hidden; }
+.stat { flex: 1; padding: 14px 18px; border-right: 1px solid var(--bdr); display: flex; align-items: center; gap: 14px; }
+.stat:last-child { border-right: none; }
+.stat .sv { font-family: 'JetBrains Mono', monospace; font-size: 24px; font-weight: 600; line-height: 1; letter-spacing: -.5px; }
+.stat .sv.hi { color: var(--accent); }
+.stat .sl { font-family: 'Syne', sans-serif; font-size: 10px; color: var(--mu); text-transform: uppercase; letter-spacing: .08em; font-weight: 600; margin-top: 4px; }
+.stat .sd { font-size: 10px; color: var(--mu2); margin-top: 3px; font-family: 'JetBrains Mono', monospace; }
+
+.fr { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
+.si { background: var(--card); color: var(--tx); border: 1px solid var(--bdr2); border-radius: 7px; font: inherit; font-size: 12px; padding: 8px 12px; outline: none; transition: border-color .15s; min-width: 200px; }
+.si:focus { border-color: var(--accent); }
+.si::placeholder { color: var(--mu2); }
+select.si { cursor: pointer; font-family: 'DM Sans', sans-serif; }
+.fchip { padding: 6px 12px; border-radius: 18px; font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 600; border: 1px solid var(--bdr2); background: transparent; color: var(--mu); cursor: pointer; transition: all .15s; display: inline-flex; align-items: center; gap: 6px; }
+.fchip:hover { color: var(--tx); }
+.fchip.on { background: var(--accent-2); border-color: var(--accent); color: var(--accent); }
+.fchip .fc { font-family: 'JetBrains Mono', monospace; font-size: 10px; opacity: .8; }
+
+.sel-bar { display: none; position: sticky; top: 52px; z-index: 9; background: var(--accent); color: #fff; border-radius: 10px; padding: 10px 16px; margin-bottom: 12px; align-items: center; gap: 14px; }
+.sel-bar.show { display: flex; animation: slideDown .2s ease; }
+@keyframes slideDown { from { transform: translateY(-6px); opacity: 0; } to { transform: none; opacity: 1; } }
+.sel-bar .sc { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; }
+.sel-bar select, .sel-bar button { background: rgba(0,0,0,.25); border: 1px solid rgba(255,255,255,.2); color: #fff; font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 600; padding: 7px 12px; border-radius: 6px; cursor: pointer; }
+.sel-bar select option { background: var(--accent); color: #fff; }
+.sel-bar .sb-action { background: #fff; color: var(--accent); border-color: transparent; }
+.sel-bar .sb-action.smart { background: var(--ai); color: #fff; }
+.sel-bar .sb-clear { margin-left: auto; background: transparent; border: 1px solid rgba(255,255,255,.3); }
+
+.tbl-card { background: var(--card); border: 1px solid var(--bdr); border-radius: 12px; overflow: hidden; }
+.tblw { overflow-x: auto; }
+.tbl { width: 100%; border-collapse: collapse; }
+.tbl th { padding: 11px 14px; text-align: left; font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 600; color: var(--mu); text-transform: uppercase; letter-spacing: .09em; white-space: nowrap; border-bottom: 1px solid var(--bdr); background: var(--card2); user-select: none; }
+.tbl th.sortable { cursor: pointer; }
+.tbl th.sortable:hover { color: var(--tx); }
+.tbl th.asc::after  { content: ' ↑'; color: var(--accent); }
+.tbl th.desc::after { content: ' ↓'; color: var(--accent); }
+.tbl td { padding: 10px 14px; border-bottom: 1px solid var(--bdr); vertical-align: middle; font-size: 12px; }
+.tbl tbody tr { transition: background .12s; }
+.tbl tbody tr.sel-row { background: rgba(232,53,80,.06); }
+.tbl tbody tr:hover { background: var(--card2); }
+.tbl tbody tr.sel-row:hover { background: rgba(232,53,80,.09); }
+.tbl tbody tr:last-child td { border-bottom: none; }
+
+.cname { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .02em; }
+
+.ie { background: transparent; border: none; color: var(--tx); font: inherit; font-size: 12px; font-family: 'DM Sans', sans-serif; padding: 4px 8px; border-radius: 5px; width: 100%; transition: all .12s; min-width: 140px; }
+.ie:hover { background: var(--card2); }
+.ie:focus { outline: 1px solid var(--accent); background: var(--card2); }
+.ie.empty { color: var(--mu2); font-style: italic; }
+.ie.mono { font-family: 'JetBrains Mono', monospace; font-size: 11px; }
+
+.st { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; background: var(--off); color: var(--mu); border: 1px solid var(--off-br); }
+.st.on { background: var(--accent-2); color: var(--accent); border-color: rgba(232,53,80,.3); }
+
+.chk { appearance: none; width: 16px; height: 16px; border: 1.5px solid var(--bdr2); border-radius: 4px; background: transparent; cursor: pointer; transition: all .12s; flex-shrink: 0; position: relative; }
+.chk:hover { border-color: var(--accent); }
+.chk:checked { background: var(--accent); border-color: var(--accent); }
+.chk:checked::after { content: '✓'; position: absolute; inset: 0; color: #fff; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; line-height: 1; }
+
+.card { background: var(--card); border: 1px solid var(--bdr); border-radius: 12px; overflow: hidden; }
+.ch { padding: 14px 18px; border-bottom: 1px solid var(--bdr); display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.ch .ct { font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: -.1px; }
+.ch .cs { font-size: 10px; color: var(--mu2); margin-top: 3px; text-transform: uppercase; letter-spacing: .08em; font-weight: 500; }
+.cb { padding: 18px; }
+
+.seq-grid { display: grid; grid-template-columns: 260px 1fr; gap: 14px; }
+.seq-list { display: flex; flex-direction: column; gap: 8px; }
+.seq-item { background: var(--card); border: 1px solid var(--bdr); border-radius: 11px; padding: 13px 15px; cursor: pointer; transition: all .15s; }
+.seq-item:hover { border-color: var(--bdr2); }
+.seq-item.active { border-color: var(--accent); background: var(--accent-3); }
+.seq-item.smart.active { border-color: var(--ai); background: rgba(167,139,250,.06); }
+.seq-item .tn { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center; }
+.seq-item .tn .sb-tag { font-family: 'JetBrains Mono', monospace; font-size: 9px; padding: 2px 7px; background: var(--ai-bg); color: var(--ai); border-radius: 4px; letter-spacing: .04em; text-transform: uppercase; font-weight: 600; }
+.seq-item .td { font-size: 11px; color: var(--mu); line-height: 1.45; }
+
+.editor-stack { display: flex; flex-direction: column; gap: 14px; }
+.editor-block { background: var(--card); border: 1px solid var(--bdr); border-radius: 12px; overflow: hidden; }
+.eh { padding: 13px 18px; border-bottom: 1px solid var(--bdr); display: flex; align-items: center; justify-content: space-between; }
+.eh .et { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 12px; letter-spacing: -.1px; }
+.eh .edelay { font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 2px 8px; border-radius: 4px; background: var(--off); color: var(--mu); letter-spacing: .03em; }
+.eb { padding: 16px 18px; }
+.fg { margin-bottom: 12px; }
+.fg:last-child { margin-bottom: 0; }
+.fl { display: block; font-family: 'Syne', sans-serif; font-size: 10px; font-weight: 700; color: var(--mu); letter-spacing: .08em; text-transform: uppercase; margin-bottom: 6px; }
+.fi2 { width: 100%; background: var(--bg); color: var(--tx); border: 1px solid var(--bdr2); border-radius: 8px; font: inherit; font-size: 13px; padding: 9px 12px; outline: none; transition: border-color .15s; font-family: 'DM Sans', sans-serif; }
+.fi2:focus { border-color: var(--accent); }
+textarea.fi2 { resize: vertical; line-height: 1.65; min-height: 140px; }
+textarea.fi2.tall { min-height: 200px; }
+textarea.fi2.xtall { min-height: 280px; }
+
+.placeholder-hints { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.ph { font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 8px; border-radius: 5px; background: var(--card2); color: var(--mu); cursor: pointer; border: 1px solid var(--bdr); transition: all .12s; }
+.ph:hover { color: var(--accent); border-color: var(--accent); }
+
+/* ─── MODAL ─── */
+.mv { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.75); backdrop-filter: blur(6px); z-index: 100; align-items: flex-start; justify-content: center; padding: 40px 20px; overflow-y: auto; }
+.mv.show { display: flex; }
+.md { background: var(--panel); border: 1px solid var(--bdr2); border-radius: 14px; max-width: 820px; width: 100%; overflow: hidden; }
+.md.wide { max-width: 920px; }
+.mh { padding: 18px 22px; border-bottom: 1px solid var(--bdr); display: flex; align-items: center; justify-content: space-between; }
+.mh .mt { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 14px; }
+.mh .mt .mts { display: block; font-family: 'DM Sans', sans-serif; font-size: 11px; color: var(--mu); font-weight: 400; margin-top: 3px; }
+.mb { padding: 22px; max-height: calc(100vh - 260px); overflow-y: auto; }
+.mf { padding: 14px 22px; border-top: 1px solid var(--bdr); display: flex; gap: 10px; justify-content: flex-end; align-items: center; }
+.xb { background: transparent; border: none; color: var(--mu); cursor: pointer; font-size: 20px; line-height: 1; padding: 4px 8px; border-radius: 5px; }
+.xb:hover { color: var(--tx); background: var(--card2); }
+
+.rcp-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; max-height: 240px; overflow-y: auto; padding: 2px; }
+.rcp { display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: var(--card); border: 1px solid var(--bdr); border-radius: 8px; font-size: 12px; }
+.rcp .rn { font-family: 'Syne', sans-serif; font-weight: 700; text-transform: uppercase; min-width: 120px; }
+.rcp .re { color: var(--mu); flex: 1; font-family: 'JetBrains Mono', monospace; font-size: 11px; }
+.rcp.no-email { border-color: rgba(245,166,35,.25); background: rgba(245,166,35,.04); }
+.rcp.no-email .re { color: var(--warn); font-style: italic; font-family: 'DM Sans', sans-serif; }
+.rcp .rs { font-family: 'JetBrains Mono', monospace; font-size: 9px; padding: 3px 8px; border-radius: 4px; background: var(--off); color: var(--mu); text-transform: uppercase; letter-spacing: .05em; }
+.rcp .rs.ok { background: var(--ok-bg); color: var(--ok); }
+.rcp .rs.warn { background: var(--warn-bg); color: var(--warn); }
+.rcp .rmiss { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--mu2); text-transform: uppercase; letter-spacing: .04em; }
+
+.privacy-note { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; background: rgba(34,212,122,.06); border: 1px solid rgba(34,212,122,.18); border-radius: 8px; font-size: 11px; color: var(--ok); line-height: 1.55; }
+.privacy-note strong { font-family: 'Syne', sans-serif; font-weight: 700; }
+
+.warn-note { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; background: rgba(245,166,35,.06); border: 1px solid rgba(245,166,35,.18); border-radius: 8px; font-size: 11px; color: var(--warn); line-height: 1.55; margin-bottom: 14px; }
+
+.ai-note { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; background: var(--ai-bg); border: 1px solid rgba(167,139,250,.2); border-radius: 8px; font-size: 11px; color: var(--ai); line-height: 1.55; margin-bottom: 14px; }
+
+.pv-preview { background: var(--bg); border: 1px solid var(--bdr); border-radius: 10px; overflow: hidden; margin-top: 8px; }
+.pv-head { padding: 10px 14px; background: var(--card2); font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--mu); border-bottom: 1px solid var(--bdr); display: flex; justify-content: space-between; align-items: center; }
+.pv-body { padding: 16px 18px; font-size: 12px; line-height: 1.7; white-space: pre-wrap; color: #d8d8e4; }
+.pv-body strong { color: #fff; font-weight: 600; }
+
+/* AI draft blocks */
+.draft-group {
+  background: var(--card); border: 1px solid var(--bdr); border-radius: 11px; overflow: hidden;
+  margin-bottom: 12px;
+}
+.draft-group.loading { border-color: rgba(167,139,250,.3); }
+.draft-group.ready { border-color: rgba(34,212,122,.2); }
+.dg-head { padding: 12px 16px; background: var(--card2); display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--bdr); }
+.dg-head .dg-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 12px; flex: 1; }
+.dg-head .dg-sub { font-size: 10px; color: var(--mu); font-family: 'JetBrains Mono', monospace; }
+.dg-head .dg-state { font-family: 'JetBrains Mono', monospace; font-size: 9px; padding: 3px 8px; border-radius: 4px; background: var(--off); color: var(--mu); text-transform: uppercase; letter-spacing: .04em; }
+.dg-head .dg-state.loading { background: var(--ai-bg); color: var(--ai); }
+.dg-head .dg-state.ready { background: var(--ok-bg); color: var(--ok); }
+.dg-head .dg-state.err { background: rgba(239,68,68,.1); color: var(--bad); }
+.dg-body { padding: 14px 16px; }
+.dg-body.collapsed { display: none; }
+.dg-recipients { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px; font-family: 'JetBrains Mono', monospace; font-size: 10px; }
+.dg-recipients .chip-r { padding: 3px 8px; border-radius: 4px; background: var(--card2); color: var(--mu); border: 1px solid var(--bdr); }
+
+.spinner-ai { width: 14px; height: 14px; border: 2px solid var(--ai-bg); border-top-color: var(--ai); border-radius: 50%; animation: spin 0.7s linear infinite; display: inline-block; vertical-align: middle; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.collapse-btn { background: transparent; border: 1px solid var(--bdr2); color: var(--mu); font-size: 10px; padding: 4px 9px; border-radius: 5px; cursor: pointer; font-family: 'JetBrains Mono', monospace; }
+.collapse-btn:hover { color: var(--tx); border-color: var(--accent); }
+
+.row-block { display: flex; align-items: center; gap: 16px; padding: 6px 0; }
+.row-block .ic-lg { width: 44px; height: 44px; background: var(--card2); border: 1px solid var(--bdr2); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace; font-size: 16px; color: var(--mu); flex-shrink: 0; }
+.row-block .tx { flex: 1; }
+.row-block .tx-t { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; }
+.row-block .tx-d { font-size: 11px; color: var(--mu); margin-top: 3px; line-height: 1.5; }
+
+.hr { height: 1px; background: var(--bdr); margin: 16px 0; }
+
+.toast { position: fixed; bottom: 20px; right: 20px; background: var(--card); border: 1px solid var(--bdr2); border-radius: 10px; padding: 12px 18px; z-index: 200; box-shadow: 0 8px 30px rgba(0,0,0,.4); font-size: 12px; display: flex; align-items: center; gap: 10px; opacity: 0; transform: translateY(10px); transition: all .2s; max-width: 340px; }
+.toast.show { opacity: 1; transform: none; }
+.toast.ok { border-color: rgba(34,212,122,.3); }
+.toast.bad { border-color: rgba(239,68,68,.3); }
+.toast .dot-sm { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); flex-shrink: 0; }
+.toast.bad .dot-sm { background: var(--bad); }
+
+.empty-state { padding: 40px 20px; text-align: center; color: var(--mu); }
+.empty-state .ei { font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; color: var(--tx); margin-bottom: 6px; }
+
+.hd-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.hd-row h2 { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700; letter-spacing: -.2px; }
+.hd-row h2 .cnt-x { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--mu2); margin-left: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: .08em; }
+
+.footnote { font-size: 11px; color: var(--mu); line-height: 1.55; padding: 12px 14px; background: var(--card2); border-radius: 8px; border: 1px solid var(--bdr); margin-top: 14px; }
+
+/* Key/value secure display */
+.key-show { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1px; }
+
+.email-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 190px;
+}
+.email-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.email-row .ie {
+  flex: 1;
+  min-width: 150px;
+}
+.email-x {
+  background: transparent;
+  border: none;
+  color: var(--mu2);
+  cursor: pointer;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 13px;
+  line-height: 1;
+  opacity: 0;
+  transition: all .12s;
+  font-family: 'JetBrains Mono', monospace;
+}
+tr:hover .email-x { opacity: 0.6; }
+.email-x:hover { color: var(--bad); background: rgba(239,68,68,.08); opacity: 1 !important; }
+.email-add {
+  background: transparent;
+  border: none;
+  color: var(--mu2);
+  cursor: pointer;
+  padding: 3px 7px;
+  font-size: 10px;
+  font-family: 'JetBrains Mono', monospace;
+  text-align: left;
+  margin-top: 1px;
+  opacity: 0;
+  transition: opacity .15s, color .15s;
+  border-radius: 4px;
+  align-self: flex-start;
+  letter-spacing: .03em;
+}
+tr:hover .email-add { opacity: 0.7; }
+.email-add:hover { color: var(--accent); opacity: 1; }
+
+.mrr-cell {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--mu);
+  font-weight: 500;
+  letter-spacing: -.2px;
+}
+.mrr-cell.high { color: var(--accent); font-weight: 600; }
+
+.re-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--mu);
+}
+.re-line:first-child { color: var(--tx); }
+.tag-to {
+  background: var(--accent-2);
+  color: var(--accent);
+  font-family: 'Syne', sans-serif;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 3px;
+  letter-spacing: .04em;
+  min-width: 26px;
+  text-align: center;
+}
+.tag-cc {
+  background: var(--off);
+  color: var(--mu);
+  font-family: 'Syne', sans-serif;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 3px;
+  letter-spacing: .04em;
+  min-width: 26px;
+  text-align: center;
+}
+
+.rcp {
+  align-items: flex-start !important;
+}
+.rcp .re {
+  flex-direction: column;
+  display: flex;
+  font-family: inherit !important;
+  font-size: 12px !important;
+}
+
+
+/* ─── REVENUE PAGE ─── */
+.scen-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+}
+.scen {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.scen .fl { margin-bottom: 2px; }
+.scen-input {
+  font-size: 20px !important;
+  font-weight: 600 !important;
+  padding: 10px 14px !important;
+  text-align: center;
+  letter-spacing: -.3px;
+}
+.scen-hint {
+  font-size: 10px;
+  color: var(--mu2);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  font-family: 'Syne', sans-serif;
+  font-weight: 500;
+}
+
+.feat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin-bottom: 14px;
+}
+.feat-card {
+  background: var(--card);
+  border: 1px solid var(--bdr);
+  border-radius: 12px;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: border-color .15s;
+}
+.feat-card:hover { border-color: var(--bdr2); }
+.feat-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+.feat-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: -.1px;
+}
+.feat-unit {
+  font-size: 10px;
+  color: var(--mu2);
+  letter-spacing: -.2px;
+}
+.feat-amount {
+  font-size: 32px;
+  font-weight: 600;
+  letter-spacing: -.8px;
+  line-height: 1;
+  color: var(--accent);
+  margin-top: 4px;
+}
+.feat-detail {
+  font-size: 11px;
+  color: var(--mu);
+  margin-top: 4px;
+  line-height: 1.5;
+}
+.feat-detail .mono {
+  color: var(--tx);
+  font-weight: 500;
+}
+
+.total-strip {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr auto 1fr;
+  gap: 18px;
+  background: var(--card);
+  border: 1px solid var(--bdr);
+  border-radius: 12px;
+  padding: 20px 24px;
+  align-items: center;
+}
+.total-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: center;
+}
+.total-label {
+  font-family: 'Syne', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--mu);
+  text-transform: uppercase;
+  letter-spacing: .1em;
+}
+.total-amount {
+  font-size: 30px;
+  font-weight: 600;
+  letter-spacing: -.8px;
+  line-height: 1;
+  color: var(--tx);
+}
+.total-amount.hi { color: var(--accent); }
+.total-sub {
+  font-size: 10px;
+  color: var(--mu2);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  font-family: 'Syne', sans-serif;
+  font-weight: 500;
+}
+.total-arrow {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--mu2);
+  padding: 0 6px;
+  letter-spacing: -.3px;
+}
+
+.miss-chip {
+  display: inline-block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: var(--off);
+  color: var(--mu);
+  border: 1px solid var(--off-br);
+  letter-spacing: .03em;
+  margin-right: 3px;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.ie.override {
+  color: var(--accent) !important;
+  font-weight: 600;
+}
+
+
+/* ─── ACTIVITY PAGE ─── */
+.step-chip {
+  display: inline-block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--off);
+  color: var(--mu);
+  border: 1px solid var(--off-br);
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+.step-chip.fup1 { background: rgba(245,166,35,.1); color: var(--warn); border-color: rgba(245,166,35,.22); }
+.step-chip.fup2 { background: rgba(239,68,68,.1); color: var(--bad); border-color: rgba(239,68,68,.22); }
+
+.status-pill {
+  display: inline-block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+.status-pill.sent   { background: var(--ok-bg); color: var(--ok); }
+.status-pill.failed { background: rgba(239,68,68,.1); color: var(--bad); }
+
+.overdue { color: var(--bad) !important; font-weight: 700; }
+
+
+.seq-separator {
+  font-family: 'Syne', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--mu);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  padding: 8px 4px 4px;
+  border-top: 1px dashed var(--bdr);
+  margin-top: 8px;
+}
+.seq-item.custom { border-left: 2px solid var(--accent); }
+.seq-item.custom.active { border-left-color: var(--accent); }
+
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <aside class="sb">
+    <div class="sb-h">
+      <div class="sb-logo">TTS<span>.</span></div>
+      <div class="sb-title">Activation Engine</div>
+    </div>
+    <nav class="sb-nav">
+      <div class="ni active" data-pg="clients"><span class="ic">◎</span> Clients <span class="cn" id="cn-clients">—</span></div>
+      <div class="ni" data-pg="sequences"><span class="ic">◍</span> Sequences <span class="cn" id="cn-sequences">—</span></div>
+      <div class="ni" data-pg="activity"><span class="ic">◔</span> Activity <span class="cn" id="cn-activity">—</span></div>
+      <div class="ni" data-pg="revenue"><span class="ic">$</span> Revenue <span class="cn" id="cn-revenue">—</span></div>
+      <div class="ni" data-pg="setup"><span class="ic">⚙</span> Setup</div>
+    </nav>
+    <div class="sb-f">
+      <div class="sb-status">
+        <div class="lbl">Gmail</div>
+        <div class="val"><span class="dot" id="gmail-dot"></span> <span id="gmail-state">Not connected</span></div>
+      </div>
+      <div class="sb-status">
+        <div class="lbl">Claude AI</div>
+        <div class="val"><span class="dot" id="ai-dot"></span> <span id="ai-state">No key set</span></div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div class="pt display" id="topTitle">Clients<span class="sub" id="topSub"></span></div>
+      <div class="tools">
+        <button class="btn bo bsm" onclick="exportCSV()">↓ Export CSV</button>
+        <button class="btn bp bsm" onclick="openAddClient()">+ Add client</button>
+      </div>
+    </div>
+
+    <div class="cnt">
+
+      <!-- ═══ CLIENTS ═══ -->
+      <div class="page active" id="pg-clients">
+        <div class="stat-strip">
+          <div class="stat"><div><div class="sv mono" id="st-total">—</div><div class="sl">Clients</div></div></div>
+          <div class="stat"><div><div class="sv mono hi" id="st-email">—</div><div class="sl">With email</div><div class="sd" id="st-email-pct">—</div></div></div>
+          <div class="stat"><div><div class="sv mono" id="st-missc">—</div><div class="sl">Missing Comp.</div></div></div>
+          <div class="stat"><div><div class="sv mono" id="st-missr">—</div><div class="sl">Missing Rewards</div></div></div>
+          <div class="stat"><div><div class="sv mono" id="st-missrk">—</div><div class="sl">Missing Risk Rep.</div></div></div>
+        </div>
+
+        <div class="fr">
+          <input class="si" id="q" placeholder="Search client…" oninput="render()">
+          <button class="fchip on" data-filter="all">All <span class="fc" id="cnt-all">—</span></button>
+          <button class="fchip" data-filter="miss-competitions">Missing Competitions <span class="fc" id="cnt-missc">—</span></button>
+          <button class="fchip" data-filter="miss-rewards">Missing Rewards <span class="fc" id="cnt-missr">—</span></button>
+          <button class="fchip" data-filter="miss-risk_reports">Missing Risk Reports <span class="fc" id="cnt-missrk">—</span></button>
+          <button class="fchip" data-filter="miss-any">Missing any <span class="fc" id="cnt-missany">—</span></button>
+          <button class="fchip" data-filter="no-email">No email <span class="fc" id="cnt-noemail">—</span></button>
+          <div style="margin-left:auto;font-size:11px;color:var(--mu2)"><span class="mono" id="visible-count">—</span> visible</div>
+        </div>
+
+        <div class="sel-bar" id="sel-bar">
+          <div class="sc"><span id="sel-count">0</span> selected</div>
+          <span style="opacity:.9">→</span>
+          <select id="sel-sequence"></select>
+          <button class="sb-action" id="preview-btn" onclick="openSendModal()">Preview & send</button>
+          <button class="sb-clear" onclick="clearSelection()">Clear</button>
+        </div>
+
+        <div class="tbl-card">
+          <div class="tblw">
+            <table class="tbl" id="client-table">
+              <thead>
+                <tr>
+                  <th style="width:32px"><input type="checkbox" class="chk" id="chk-all" onclick="toggleAll(this)"></th>
+                  <th class="sortable" data-sort="client">Client</th>
+                  <th>Contact</th>
+                  <th>Email</th>
+                  <th>PM</th>
+                  <th class="sortable" data-sort="competitions" style="text-align:center">Comp.</th>
+                  <th class="sortable" data-sort="rewards" style="text-align:center">Rwd.</th>
+                  <th class="sortable" data-sort="risk_reports" style="text-align:center">Risk</th>
+                  <th class="sortable" data-sort="university" style="text-align:center">Uni.</th>
+                  <th style="text-align:right;width:60px"></th>
+                </tr>
+              </thead>
+              <tbody id="client-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ SEQUENCES ═══ -->
+      <div class="page" id="pg-sequences">
+        <div class="hd-row">
+          <h2 class="display">Sequences<span class="cnt-x" id="seq-cnt-x">—</span></h2>
+          <div style="display:flex;gap:6px">
+            <button class="btn bp bsm" onclick="createCustomTemplate()">+ New template</button>
+            <button class="btn bo bsm" onclick="resetSequences()">Reset built-ins</button>
+          </div>
+        </div>
+
+        <div class="seq-grid">
+          <div class="seq-list" id="seq-list"></div>
+          <div id="seq-editor"></div>
+        </div>
+      </div>
+
+      <!-- ═══ REVENUE ═══ -->
+      <div class="page" id="pg-revenue">
+        <div class="hd-row">
+          <h2 class="display">Revenue forecast<span class="cnt-x" id="rev-sub">—</span></h2>
+          <div style="display:flex;gap:6px">
+            <button class="btn bo bsm" onclick="applyScenario('conservative')">Conservative</button>
+            <button class="btn bo bsm" onclick="applyScenario('baseline')">Baseline</button>
+            <button class="btn bo bsm" onclick="applyScenario('aggressive')">Aggressive</button>
+          </div>
+        </div>
+
+        <!-- Scenario inputs -->
+        <div class="card" style="margin-bottom:14px">
+          <div class="ch"><div><div class="ct">Scenario</div><div class="cs">change the numbers, watch everything move</div></div></div>
+          <div class="cb">
+            <div class="scen-grid">
+              <div class="scen">
+                <label class="fl">Default accounts · per client</label>
+                <input class="fi2 mono scen-input" id="scen-accts" type="number" min="0" step="50" oninput="updateScenario()">
+                <div class="scen-hint">can override per-client below</div>
+              </div>
+              <div class="scen">
+                <label class="fl">Competitions · per month</label>
+                <input class="fi2 mono scen-input" id="scen-comp" type="number" min="0" max="10" step="0.5" oninput="updateScenario()">
+                <div class="scen-hint">average event frequency</div>
+              </div>
+              <div class="scen">
+                <label class="fl">Conversion rate · %</label>
+                <input class="fi2 mono scen-input" id="scen-conv" type="number" min="0" max="100" step="5" oninput="updateScenario()">
+                <div class="scen-hint">% of opportunities you actually close</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Feature breakdown -->
+        <div class="feat-grid">
+          <div class="feat-card">
+            <div class="feat-head">
+              <div class="feat-title">Risk Reports</div>
+              <div class="feat-unit mono">$550/mo flat</div>
+            </div>
+            <div class="feat-amount mono" id="feat-risk-amt">—</div>
+            <div class="feat-detail"><span class="mono" id="feat-risk-count">—</span> clients × $550</div>
+          </div>
+          <div class="feat-card">
+            <div class="feat-head">
+              <div class="feat-title">Competitions</div>
+              <div class="feat-unit mono">$0.85/acct/event</div>
+            </div>
+            <div class="feat-amount mono" id="feat-comp-amt">—</div>
+            <div class="feat-detail"><span class="mono" id="feat-comp-count">—</span> clients × <span class="mono" id="feat-comp-rate">—</span> events/mo</div>
+          </div>
+          <div class="feat-card">
+            <div class="feat-head">
+              <div class="feat-title">Rewards</div>
+              <div class="feat-unit mono">$0.25/acct/mo</div>
+            </div>
+            <div class="feat-amount mono" id="feat-rew-amt">—</div>
+            <div class="feat-detail"><span class="mono" id="feat-rew-count">—</span> clients × avg accts</div>
+          </div>
+        </div>
+
+        <!-- Totals -->
+        <div class="total-strip">
+          <div class="total-block">
+            <div class="total-label">Max potential</div>
+            <div class="total-amount mono hi" id="total-mrr">—</div>
+            <div class="total-sub">monthly recurring</div>
+          </div>
+          <div class="total-arrow">×12</div>
+          <div class="total-block">
+            <div class="total-label">Annualised</div>
+            <div class="total-amount mono" id="total-arr">—</div>
+            <div class="total-sub">if all activate</div>
+          </div>
+          <div class="total-arrow">at <span id="conv-display">—</span>%</div>
+          <div class="total-block">
+            <div class="total-label">Realistic</div>
+            <div class="total-amount mono" id="total-conv">—</div>
+            <div class="total-sub">applying conversion</div>
+          </div>
+        </div>
+
+        <!-- Per-client opportunity table -->
+        <div class="card" style="margin-top:14px">
+          <div class="ch">
+            <div>
+              <div class="ct">Top opportunities</div>
+              <div class="cs">override accounts inline to model real scale</div>
+            </div>
+            <div style="font-size:10px;color:var(--mu);font-family:'JetBrains Mono',monospace">sorted by potential MRR, highest first</div>
+          </div>
+          <div class="tblw">
+            <table class="tbl">
+              <thead>
+                <tr>
+                  <th>Client</th>
+                  <th>Missing</th>
+                  <th style="text-align:right;width:100px">Accts</th>
+                  <th style="text-align:right;width:90px">MRR</th>
+                  <th style="text-align:right;width:90px">ARR</th>
+                </tr>
+              </thead>
+              <tbody id="rev-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+            <!-- ═══ ACTIVITY ═══ -->
+      <div class="page" id="pg-activity">
+        <div class="stat-strip">
+          <div class="stat"><div><div class="sv mono" id="act-total">—</div><div class="sl">Total sent</div></div></div>
+          <div class="stat"><div><div class="sv mono hi" id="act-today">—</div><div class="sl">Sent today</div></div></div>
+          <div class="stat"><div><div class="sv mono" id="act-week">—</div><div class="sl">Sent this week</div></div></div>
+          <div class="stat"><div><div class="sv mono" id="act-failed">—</div><div class="sl">Failed</div></div></div>
+          <div class="stat"><div><div class="sv mono hi" id="act-due">—</div><div class="sl">Follow-ups due</div></div></div>
+        </div>
+
+        <div class="fr">
+          <input class="si" id="act-q" placeholder="Search client…" oninput="renderActivity()">
+          <select class="si" id="act-template-filter" onchange="renderActivity()" style="min-width:160px"></select>
+          <select class="si" id="act-step-filter" onchange="renderActivity()" style="min-width:140px">
+            <option value="">All steps</option>
+            <option value="initial">Initial</option>
+            <option value="fup1">Follow-up 1</option>
+            <option value="fup2">Follow-up 2</option>
+          </select>
+          <select class="si" id="act-status-filter" onchange="renderActivity()" style="min-width:130px">
+            <option value="">All statuses</option>
+            <option value="sent">Sent</option>
+            <option value="failed">Failed</option>
+          </select>
+          <button class="btn bo bsm" onclick="exportActivity()">↓ Export log</button>
+          <button class="btn bo bsm" onclick="if(confirm('Clear entire activity log? This cannot be undone.')){ACTIVITY=[];saveActivity();renderActivity();toast('Log cleared','ok')}">Clear log</button>
+        </div>
+
+        <!-- Follow-ups due card -->
+        <div class="card" id="due-card" style="margin-bottom:14px;display:none">
+          <div class="ch">
+            <div><div class="ct" style="color:var(--accent)">● Follow-ups due</div><div class="cs">initial emails sent over a day ago without a reply-check — send +1d / +8d if you haven't heard back</div></div>
+            <button class="btn bo bsm" onclick="showFollowupPlanModal()">Plan follow-ups</button>
+          </div>
+          <div class="tblw">
+            <table class="tbl">
+              <thead><tr><th>Client</th><th>Template</th><th>Step</th><th>Initial sent</th><th>Days ago</th><th></th></tr></thead>
+              <tbody id="due-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- All activity table -->
+        <div class="card">
+          <div class="ch">
+            <div class="ct">Send log</div>
+            <div style="font-size:10px;color:var(--mu);font-family:'JetBrains Mono',monospace" id="act-visible-count">— visible</div>
+          </div>
+          <div class="tblw">
+            <table class="tbl">
+              <thead>
+                <tr>
+                  <th style="width:120px">When</th>
+                  <th>Client</th>
+                  <th>Template</th>
+                  <th style="width:80px">Step</th>
+                  <th>Subject</th>
+                  <th style="width:80px;text-align:center">Status</th>
+                  <th style="width:120px">Recipients</th>
+                  <th style="width:40px"></th>
+                </tr>
+              </thead>
+              <tbody id="act-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Activity detail modal -->
+      <div class="mv" id="mv-act-detail">
+        <div class="md">
+          <div class="mh"><div class="mt">Email detail<span class="mts" id="mv-act-sub"></span></div><button class="xb" onclick="closeModal('mv-act-detail')">×</button></div>
+          <div class="mb" id="mv-act-body"></div>
+          <div class="mf">
+            <button class="btn bo" onclick="closeModal('mv-act-detail')">Close</button>
+          </div>
+        </div>
+      </div>
+
+            <!-- ═══ SETUP ═══ -->
+      <div class="page" id="pg-setup">
+        <div class="hd-row"><h2 class="display">Setup</h2></div>
+
+        <div class="card" style="margin-bottom:14px">
+          <div class="ch"><div class="ct">Gmail connection</div></div>
+          <div class="cb">
+            <div class="row-block">
+              <div class="ic-lg">✉</div>
+              <div class="tx">
+                <div class="tx-t" id="gmail-tx-t">Not connected</div>
+                <div class="tx-d">Sign in with your Workspace account. Scope <span class="mono" style="color:var(--accent)">gmail.send</span>. Emails are sent one-per-recipient — clients never see each other.</div>
+              </div>
+              <button class="btn bp" id="gmail-btn" onclick="toggleGmail()">Connect Gmail</button>
+            </div>
+            <div class="hr"></div>
+            <div class="fg">
+              <label class="fl">Google OAuth Client ID</label>
+              <input class="fi2 mono" id="oauth-client-id" placeholder="xxxxxxxxx.apps.googleusercontent.com" oninput="saveSettings()">
+              <div class="footnote" style="margin-top:8px">Create one in Google Cloud Console → APIs & Services → Credentials → OAuth Client ID (type: Web application). Add <span class="mono" style="color:var(--accent)" id="origin-uri">your origin</span> as an authorised JavaScript origin. Enable the Gmail API for the project.</div>
+            </div>
+            <div class="fg">
+              <label class="fl">Default sender name</label>
+              <input class="fi2" id="sender-name" placeholder="Dan · Trade Tech Solutions" oninput="saveSettings()">
+            </div>
+            <div class="fg">
+              <label class="fl">Booking link <span style="color:var(--mu2);font-weight:400">· 15 min hard cap</span></label>
+              <input class="fi2 mono" id="booking-link" placeholder="https://cal.com/tts/15min" oninput="saveSettings()">
+              <div class="footnote" style="margin-top:8px">Inserted wherever a template contains the word <span class="mono" style="color:var(--accent)">{BookingLink}</span>.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:14px">
+          <div class="ch"><div><div class="ct">Claude AI · email drafting</div><div class="cs">optional · powers Smart mode</div></div></div>
+          <div class="cb">
+            <div class="row-block">
+              <div class="ic-lg" style="color:var(--ai)">✦</div>
+              <div class="tx">
+                <div class="tx-t" id="ai-tx-t">No key set</div>
+                <div class="tx-d">Used only when you pick <strong>Smart</strong> as a sequence. The AI drafts personalised emails per client based on their missing features and any brief you provide. Your key is stored locally in this browser — never sent anywhere except Anthropic's API.</div>
+              </div>
+            </div>
+            <div class="hr"></div>
+            <div class="fg">
+              <label class="fl">Claude API key</label>
+              <input class="fi2 mono" id="claude-key" type="password" placeholder="sk-ant-api03-…" oninput="saveSettings(); updateAIUI();">
+              <div class="footnote" style="margin-top:8px">Get one at <span class="mono" style="color:var(--accent)">console.anthropic.com</span> → API Keys. Store it in a password manager — this input is masked but held in browser localStorage in plain text.</div>
+            </div>
+            <div class="fg">
+              <label class="fl">Model</label>
+              <select class="fi2 mono" id="claude-model" onchange="saveSettings()">
+                <option value="claude-sonnet-4-6">claude-sonnet-4-6 — default · best value</option>
+                <option value="claude-opus-4-7">claude-opus-4-7 — highest quality · pricier</option>
+                <option value="claude-haiku-4-5-20251001">claude-haiku-4-5-20251001 — fastest · cheapest</option>
+              </select>
+            </div>
+            <div class="fg">
+              <label class="fl">Tone / style guide <span style="color:var(--mu2);font-weight:400">· given to the AI as system prompt</span></label>
+              <textarea class="fi2" id="ai-tone" oninput="saveSettings()" style="min-height:160px" placeholder="Short, Revolut-grade. Under 120 words. No hype, no emojis, no ROI claims. Three-part structure…"></textarea>
+              <div class="footnote" style="margin-top:8px">This text is combined with the system prompt. Change it to teach the AI your voice. A sensible default is pre-loaded.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="ch"><div class="ct">Data</div></div>
+          <div class="cb">
+            <div class="row-block">
+              <div class="ic-lg">▦</div>
+              <div class="tx">
+                <div class="tx-t">client_features CSV</div>
+                <div class="tx-d" id="csv-status">Embedded · 55 clients from the file you uploaded</div>
+              </div>
+              <input type="file" id="csv-upload" accept=".csv" style="display:none" onchange="handleCSV(this)">
+              <button class="btn bo bsm" onclick="document.getElementById('csv-upload').click()">Replace CSV</button>
+            </div>
+            <div class="hr"></div>
+            <div class="row-block">
+              <div class="ic-lg">◇</div>
+              <div class="tx">
+                <div class="tx-t">Seeded contact list</div>
+                <div class="tx-d">All 49 active clients pre-filled on first load from the master sheet. Re-apply if some got wiped — non-destructive, only fills empty fields.</div>
+              </div>
+              <button class="btn bo bsm" onclick="applySeedContacts()">Re-apply seed</button>
+              <button class="btn bo bsm" onclick="overwriteSeedContacts()">Overwrite seed</button>
+            </div>
+            <div class="hr"></div>
+            <div class="row-block">
+              <div class="ic-lg">⌬</div>
+              <div class="tx">
+                <div class="tx-t">Client edits · contacts, emails, PMs</div>
+                <div class="tx-d">Stored locally in this browser. Export regularly so nothing is lost.</div>
+              </div>
+              <button class="btn bo bsm" onclick="if(confirm('Wipe all local edits and reset to the CSV defaults?')){resetLocal()}">Reset local data</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<!-- Modals -->
+<div class="mv" id="mv-add">
+  <div class="md" style="max-width:460px">
+    <div class="mh"><div class="mt">Add client</div><button class="xb" onclick="closeModal('mv-add')">×</button></div>
+    <div class="mb">
+      <div class="fg"><label class="fl">Client name (slug)</label><input class="fi2" id="ac-name" placeholder="e.g. newclient"></div>
+      <div class="fg"><label class="fl">Contact name</label><input class="fi2" id="ac-contact"></div>
+      <div class="fg"><label class="fl">Email</label><input class="fi2 mono" id="ac-email" type="email"></div>
+      <div class="fg"><label class="fl">PM</label><input class="fi2" id="ac-pm"></div>
+    </div>
+    <div class="mf"><button class="btn bo" onclick="closeModal('mv-add')">Cancel</button><button class="btn bp" onclick="submitAddClient()">Add client</button></div>
+  </div>
+</div>
+
+<div class="mv" id="mv-send">
+  <div class="md wide">
+    <div class="mh"><div class="mt">Preview & send<span class="mts" id="mv-send-sub"></span></div><button class="xb" onclick="closeModal('mv-send')">×</button></div>
+    <div class="mb" id="mv-send-body"></div>
+    <div class="mf">
+      <div style="font-size:11px;color:var(--mu);margin-right:auto;font-family:'JetBrains Mono',monospace" id="mv-send-count"></div>
+      <button class="btn bo" onclick="closeModal('mv-send')">Cancel</button>
+      <button class="btn bp" id="btn-send-now" onclick="sendNow()">Send now</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"><span class="dot-sm"></span><span id="toast-msg"></span></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// DEFENSIVE DOM HELPERS — null-safe setters so missing elements
+// log a warning but never throw. Kills the "Cannot set properties
+// of null" class of error permanently.
+// ═══════════════════════════════════════════════════════════════
+function byId(id) { return document.getElementById(id); }
+function setText(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = val;
+  else if (typeof console !== 'undefined') console.warn('setText: #' + id + ' missing');
+}
+function setValue(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.value = val;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PRICING & REVENUE MATH — from TTS Revenue Intelligence
+// Risk Reports: $550/mo flat · Competitions: $0.85/acct/event
+// Rewards: $0.25/acct/mo · University: included
+// ═══════════════════════════════════════════════════════════════
+const PRICING = {
+  risk_reports: 550,
+  competitions: 0.85,
+  rewards: 0.25,
+};
+
+function accountsFor(slug) {
+  const c = (typeof CONTACTS !== 'undefined' && CONTACTS[slug]) ? CONTACTS[slug] : {};
+  const override = parseInt(c.accounts, 10);
+  if (override && override > 0) return override;
+  return (typeof SETTINGS !== 'undefined' && SETTINGS.defaultAccounts) ? SETTINGS.defaultAccounts : 500;
+}
+
+function compsPerMonth() {
+  return (typeof SETTINGS !== 'undefined' && SETTINGS.competitionsPerMonth !== undefined) ? SETTINGS.competitionsPerMonth : 1;
+}
+
+function conversionRate() {
+  return (typeof SETTINGS !== 'undefined' && SETTINGS.conversionRate !== undefined) ? SETTINGS.conversionRate : 100;
+}
+
+function potentialMRR(slug) {
+  const d = (typeof DATA !== 'undefined' && DATA.find) ? DATA.find(x => x.client === slug) : null;
+  if (!d) return 0;
+  const accts = accountsFor(slug);
+  let mrr = 0;
+  if (!d.risk_reports) mrr += PRICING.risk_reports;
+  if (!d.competitions) mrr += accts * PRICING.competitions * compsPerMonth();
+  if (!d.rewards)      mrr += accts * PRICING.rewards;
+  return Math.round(mrr);
+}
+
+function mrrByFeature(feature) {
+  // Returns total MRR across all clients for a single missing feature
+  if (!DATA) return 0;
+  let total = 0;
+  DATA.forEach(d => {
+    if (d[feature]) return; // has it, skip
+    const accts = accountsFor(d.client);
+    if (feature === 'risk_reports') total += PRICING.risk_reports;
+    else if (feature === 'competitions') total += accts * PRICING.competitions * compsPerMonth();
+    else if (feature === 'rewards') total += accts * PRICING.rewards;
+  });
+  return Math.round(total);
+}
+
+function countMissing(feature) {
+  if (!DATA) return 0;
+  return DATA.filter(d => !d[feature]).length;
+}
+
+function formatMRR(n) {
+  if (!n) return '—';
+  if (n >= 10000) return '$' + Math.round(n/1000) + 'k';
+  if (n >= 1000)  return '$' + (n/1000).toFixed(1) + 'k';
+  return '$' + n;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CSV DATA — 49 clients
+// ═══════════════════════════════════════════════════════════════
+const CSV_DEFAULT = `client;offers;marketing_dashboard;risk_reports;competitions;rewards;checkout;affiliates;payout_rules;premium_subscription;news_trading_risk_rules;stop_loss_risk_rules;marketing_banner;university;reward_points_on_challenge_purchase;segment_country_filtering;rewards_segment_filtering;competitions_segment_filtering;university_segment_filtering;dashboard_config;paid_competitions_primary;rewards_bulk_operations
+aifo;true;true;true;false;true;true;true;false;false;false;false;true;true;true;false;false;false;false;false;false;false
+aiprop;true;true;false;false;false;false;false;false;false;false;false;true;true;false;false;false;false;false;false;false;false
+aquacfd;true;true;true;true;true;false;false;false;false;false;false;true;true;true;false;false;false;false;false;false;false
+aquafutures;true;true;true;true;true;false;false;false;false;false;false;true;true;true;false;false;false;false;false;false;false
+atlas;true;true;true;true;true;false;false;false;false;false;false;false;true;true;false;false;false;false;false;false;false
+backedsports;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false
+betbigger;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false
+blusky;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false
+bonafx;true;true;true;false;false;false;false;false;false;false;false;true;false;false;false;false;false;false;false;false;false
+breakthrough;false;true;true;true;true;false;false;false;false;false;false;true;true;false;false;false;false;false;false;false;false
+capitalchain;true;true;true;true;true;false;false;false;false;false;false;true;true;false;false;false;false;false;false;false;false
+clarity;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false
+cyberfunded;true;true;true;false;true;false;false;false;false;false;false;false;true;false;false;false;false;false;false;false;false
+evercrest;true;true;true;true;true;false;false;false;false;false;false;true;true;true;false;false;false;false;false;false;false
+falconfunded;true;true;false;false;false;false;false;false;false;false;false;false;true;false;false;false;false;false;false;false;false
+fundedherocfd;true;true;true;true;true;false;false;false;false;false;false;false;true;false;false;false;false;false;false;false;false
+fundedherofutures;true;true;true;true;true;false;false;false;false;false;false;false;true;false;false;false;false;false;false;false;false
+fundedsquad;true;true;false;false;true;false;false;false;false;false;false;true;true;false;false;false;false;false;false;false;false
+fundedway;true;true;false;false;true;false;false;false;false;false;false;true;true;false;false;false;false;false;false;false;false
+fundeight;true;true;false;false;false;false;false;false;false;false;false;true;true;false;false;false;false;false;false;false;false
+fyt;true;true;false;true;false;false;false;false;false;false;false;false;true;false;false;false;false;false;false;false;false
+gff;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false
+gft;true;true;true;true;true;false;false;false;true;false;false;true;true;true;false;false;false;false;false;false;false
+hexfunded;false;false;true;false;true;false;false;false;false;false;false;false;true;true;false;false;false;false;false;false;true
+hyperfunding;true;true;true;true;true;true;true;false;false;false;false;true;false;true;false;false;false;false;false;false;false
+instiedge;true;true;false;true;true;true;true;false;false;false;false;true;true;false;false;false;false;false;false;false;false
+itrade;true;false;false;true;true;false;false;false;false;false;false;true;true;false;false;false;false;false;false;false;false
+kcg;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false
+kudofunded;true;true;false;false;false;false;false;false;false;false;true;true;true;false;false;false;false;false;false;false;false
+mastertrader;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false
+miltraders;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false
+mtj;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false
+mytradingmetrics;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false
+pinex;true;true;false;true;true;false;false;false;false;false;false;true;true;true;false;false;false;false;false;false;false
+pipster;true;true;true;true;false;true;true;false;false;false;false;true;true;false;false;false;false;false;false;false;false
+playfunded;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false
+propfirmshark;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false
+propxp;true;true;false;false;false;true;true;false;false;false;false;true;false;false;false;false;false;false;false;false;false
+sfx;true;true;false;true;true;false;false;false;false;false;false;false;true;false;false;false;false;false;false;false;false
+sportsfunded;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false
+stradger;true;true;true;false;true;true;true;false;false;false;false;true;true;true;false;false;false;false;false;false;false
+texaris;true;true;false;true;true;false;false;false;false;false;false;false;true;false;false;false;false;false;false;false;false
+tickblaze;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false
+toptier;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false
+trnqty;true;true;false;false;true;false;false;false;false;false;false;false;true;false;false;false;false;false;false;false;false
+vka;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false
+x7fund;true;true;true;true;true;true;true;false;false;false;false;true;true;true;false;false;false;false;false;false;false
+yrm;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false
+zenith;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false;false`;
+
+// ═══════════════════════════════════════════════════════════════
+// SEED_CONTACTS — 49 clients, now with every email from the master
+// Google Sheet. 14 clients have multiple contacts (primary in To:,
+// rest go to BCC on send).
+// ═══════════════════════════════════════════════════════════════
+const SEED_CONTACTS = {
+  aifo:              { contact: '',        emails: ['backoffice@aifo.com'],                                                                    pm: '' },
+  aiprop:            { contact: '',        emails: ['thaiquangnhan@gmail.com'],                                                                pm: '' },
+  aquacfd:           { contact: 'Jason',   emails: ['jason.bitterlin@gmail.com', 'franco@digitalboomuk.com'],                                  pm: '' },
+  aquafutures:       { contact: 'Jason',   emails: ['jason.bitterlin@gmail.com', 'franco@digitalboomuk.com'],                                  pm: '' },
+  atlas:             { contact: '',        emails: ['lantonio@atlasfunded.com'],                                                               pm: '' },
+  backedsports:      { contact: 'David',   emails: ['david@fxify.com'],                                                                        pm: '' },
+  betbigger:         { contact: '',        emails: ['lewism.element@gmail.com'],                                                               pm: '' },
+  blusky:            { contact: 'Ramann',  emails: ['ramann@blusky.pro'],                                                                      pm: '' },
+  bonafx:            { contact: 'Nabil',   emails: ['nabil@bonafx.com', 'tech@bonafx.com'],                                                    pm: '' },
+  breakthrough:      { contact: '',        emails: ['obedkarar@gmail.com'],                                                                    pm: '' },
+  capitalchain:      { contact: '',        emails: ['ceo@capitalchain.co', 'chairman@capitalchain.co', 'finance@capitalchain.co'],             pm: '' },
+  clarity:           { contact: 'Austin',  emails: ['austin@claritytraders.com'],                                                              pm: '' },
+  cyberfunded:       { contact: 'Fabio',   emails: ['fabiomarchetti9494@gmail.com'],                                                           pm: '' },
+  evercrest:         { contact: 'Lewis',   emails: ['lewisjkaler@gmail.com'],                                                                  pm: '' },
+  falconfunded:      { contact: 'Mike',    emails: ['mike@chartingsociety.com', 'nate@fxculturetrading.com'],                                  pm: '' },
+  fundedherocfd:     { contact: 'Arturo',  emails: ['arturompestana@gmail.com', 'fxparce@gmail.com'],                                          pm: '' },
+  fundedherofutures: { contact: 'Arturo',  emails: ['arturompestana@gmail.com', 'fxparce@gmail.com'],                                          pm: '' },
+  fundedsquad:       { contact: 'Ajwad',   emails: ['ajwad@fundedsquad.com', 'bilal@fundedsquad.com'],                                         pm: '' },
+  fundedway:         { contact: 'Klim',    emails: ['klim.morozov.1998@mail.ru'],                                                              pm: '' },
+  fundeight:         { contact: '',        emails: ['drdaud001@gmail.com', 'admin@amodevelopers.com', 'support@fund8.io'],                    pm: '' },
+  fyt:               { contact: '',        emails: ['admin@fundingyourtrades.com'],                                                            pm: '' },
+  gff:               { contact: '',        emails: ['datoedo@gmail.com'],                                                                      pm: '' },
+  gft:               { contact: '',        emails: ['datoedo@gmail.com'],                                                                      pm: '' },
+  hexfunded:         { contact: 'Bayly',   emails: ['bayly.williamson@globalpartners.com'],                                                    pm: '' },
+  hyperfunding:      { contact: '',        emails: ['kimosaid888@gmail.com'],                                                                  pm: '' },
+  instiedge:         { contact: '',        emails: ['tradinginstitutional.ro@gmail.com'],                                                      pm: '' },
+  itrade:            { contact: 'Katy',    emails: ['katy.shukhnina@gmail.com'],                                                               pm: '' },
+  kcg:               { contact: '',        emails: ['carvalhotheo19@gmail.com'],                                                               pm: '' },
+  kudofunded:        { contact: 'Dan',     emails: ['dan@kudofunded.com', 'finance@kudotrade.com', 'finance@kudofunded.com'],                  pm: '' },
+  mastertrader:      { contact: 'Lucas',   emails: ['lucas@sitnas.com'],                                                                       pm: '' },
+  miltraders:        { contact: 'Cyril',   emails: ['cyril.martini@miltraders.com'],                                                           pm: '' },
+  mtj:               { contact: '',        emails: ['datoedo@gmail.com'],                                                                      pm: '' },
+  mytradingmetrics:  { contact: '',        emails: ['tsaeedzaji@gmail.com', 'zain@titancapitalmarkets.co.uk'],                                pm: '' },
+  pinex:             { contact: '',        emails: ['info@theforexservice.com'],                                                               pm: '' },
+  pipster:           { contact: 'Cormac',  emails: ['cormac@pipster.io'],                                                                      pm: '' },
+  playfunded:        { contact: 'Dan',     emails: ['dan@dtl.ae'],                                                                             pm: '' },
+  propfirmshark:     { contact: 'Domas',   emails: ['domas@matkevicius.lt'],                                                                   pm: '' },
+  propxp:            { contact: 'George',  emails: ['george.p@propxp.com', 'ivan.m@propxp.com'],                                               pm: '' },
+  sfx:               { contact: 'Husam',   emails: ['Husam@sfxfunded.com'],                                                                    pm: '' },
+  sportsfunded:      { contact: 'Brett',   emails: ['brett@sportsfunded.io'],                                                                  pm: '' },
+  stradger:          { contact: '',        emails: ['admin@stradger.com'],                                                                     pm: '' },
+  texaris:           { contact: '',        emails: ['texarisofficial@gmail.com'],                                                              pm: '' },
+  tickblaze:         { contact: '',        emails: ['seank@neurostreet.com'],                                                                  pm: '' },
+  toptier:           { contact: 'Frank',   emails: ['frank.mara@toptiertrader.com', 'jamal@toptiertrader.com', 'payments@tx3funding.com'],    pm: '' },
+  trnqty:            { contact: 'Amr',     emails: ['amr.tariq97@gmail.com'],                                                                  pm: '' },
+  vka:               { contact: '',        emails: ['vvidenov@vka.solutions'],                                                                 pm: '' },
+  x7fund:            { contact: '',        emails: ['info@x7fund.com', 'operations@x7fund.com', 'soporte@x7fund.com'],                         pm: '' },
+  yrm:               { contact: '',        emails: ['ivanh@stholdings-ltd.com'],                                                               pm: '' },
+  zenith:            { contact: '',        emails: ['danielshudrya@gmail.com'],                                                                pm: '' },
+};
+
+// ═══════════════════════════════════════════════════════════════
+// SEQUENCE TEMPLATES — revised, Revolut pattern, no "already have it" assumption
+// ═══════════════════════════════════════════════════════════════
+const DEFAULT_SEQUENCES = {
+  competitions: {
+    name: 'Competitions',
+    desc: 'Pitch Competitions to clients who don\'t run them',
+    initial: {
+      subject: 'Competitions on your platform',
+      body: `Hi {FirstName},
+
+Hope you're well. I am {PM}, from Trade Tech Solutions — just touching base.
+
+Just noticed you don't have our Competitions feature turned on yet. It lets you run live events on your platform with a public leaderboard — used mostly for keeping traders engaged between challenge attempts.
+
+Worth a 15 min call so I can walk you through the setup and a few examples from firms running them?
+
+Through email, phone, or you can book 15 min in my calendar: {BookingLink}
+
+Best,
+{PM}`
+    },
+    fup1: { subject: 'Re: Competitions on your platform',
+      body: `Hi {FirstName},
+
+Just checking in to see if you had a chance to review my previous email.
+When are you free to connect?
+
+Best,
+{PM}` },
+    fup2: { subject: 'Re: Competitions on your platform',
+      body: `Hi {FirstName},
+
+Gently nudging you on the above.
+When's a good time to connect for a quick chat?
+
+Best,
+{PM}` }
+  },
+  rewards: {
+    name: 'Rewards',
+    desc: 'Pitch Rewards Points to clients not using them',
+    initial: {
+      subject: 'Rewards Points on your platform',
+      body: `Hi {FirstName},
+
+Hope you're well. I am {PM}, from Trade Tech Solutions — just touching base.
+
+Just noticed you don't have our Rewards Points system turned on yet. It's a points engine — traders earn on activity, redeem for perks. Used mostly as a retention lever between challenges.
+
+Worth a 15 min call so I can walk you through the setup and show how other firms have structured it?
+
+Through email, phone, or you can book 15 min in my calendar: {BookingLink}
+
+Best,
+{PM}`
+    },
+    fup1: { subject: 'Re: Rewards Points on your platform',
+      body: `Hi {FirstName},
+
+Just checking in to see if you had a chance to review my previous email.
+When are you free to connect?
+
+Best,
+{PM}` },
+    fup2: { subject: 'Re: Rewards Points on your platform',
+      body: `Hi {FirstName},
+
+Gently nudging you on the above.
+When's a good time to connect for a quick chat?
+
+Best,
+{PM}` }
+  },
+  risk_reports: {
+    name: 'Risk Reports',
+    desc: 'Pitch Risk Reports to clients without them',
+    initial: {
+      subject: 'Risk Reports on your platform',
+      body: `Hi {FirstName},
+
+Hope you're well. I am {PM}, from Trade Tech Solutions — just touching base.
+
+Just noticed you don't have our Risk Reports feature turned on yet. It flags rule breaches, correlated positions and pattern anomalies across your accounts — useful for catching issues before payouts go out.
+
+Worth a 15 min call so I can walk you through the setup and what it flags in practice?
+
+Through email, phone, or you can book 15 min in my calendar: {BookingLink}
+
+Best,
+{PM}`
+    },
+    fup1: { subject: 'Re: Risk Reports on your platform',
+      body: `Hi {FirstName},
+
+Just checking in to see if you had a chance to review my previous email.
+When are you free to connect?
+
+Best,
+{PM}` },
+    fup2: { subject: 'Re: Risk Reports on your platform',
+      body: `Hi {FirstName},
+
+Gently nudging you on the above.
+When's a good time to connect for a quick chat?
+
+Best,
+{PM}` }
+  },
+  partner: {
+    name: 'Partner Intro',
+    desc: 'Intro to an SEO, Cloud or PSP partner',
+    initial: {
+      subject: '{Client} — one thought',
+      body: `Hi {FirstName},
+
+I am {PM}, from Trade Tech Solutions.
+Noticed your traction recently. Wanted to share something:
+
+Partner introduction:
+
+You can plug in an external specialist we work with.
+Imagine not building it in-house.
+And getting up to speed with a team who has done this for similar firms.
+
+Happy to make a direct intro — no obligation.
+
+Through email, phone, or you can book 15 min in my calendar: {BookingLink}
+
+Best,
+{PM}`
+    },
+    fup1: { subject: 'Re: {Client} — one thought',
+      body: `Hi {FirstName},
+
+Just checking in to see if you had a chance to review my previous email.
+When are you free to connect?
+
+Best,
+{PM}` },
+    fup2: { subject: 'Re: {Client} — one thought',
+      body: `Hi {FirstName},
+
+Gently nudging you on the above.
+When's a good time to connect for a quick chat?
+
+Best,
+{PM}` }
+  },
+  silent: {
+    name: 'Silent Check-in',
+    desc: 'General check-in when no contact in 21+ days',
+    initial: {
+      subject: 'Checking in, {FirstName}',
+      body: `Hi {FirstName},
+
+I am {PM}, from Trade Tech Solutions.
+
+It's been a few weeks — just wanted to make sure everything is running cleanly on your end.
+
+If anything is worth a look, happy to jump on.
+
+Through email, phone, or you can book 15 min in my calendar: {BookingLink}
+
+Best,
+{PM}`
+    },
+    fup1: { subject: 'Re: Checking in, {FirstName}',
+      body: `Hi {FirstName},
+
+Just checking in to see if you had a chance to review my previous email.
+When are you free to connect?
+
+Best,
+{PM}` },
+    fup2: { subject: 'Re: Checking in, {FirstName}',
+      body: `Hi {FirstName},
+
+Gently nudging you on the above.
+When's a good time to connect for a quick chat?
+
+Best,
+{PM}` }
+  }
+};
+
+const DEFAULT_TONE = `You write extremely short, measured B2B emails. The style is Revolut-grade: warm but not chatty, specific but not pushy.
+
+HARD RULES:
+• Under 120 words for the initial email.
+• No exclamation marks.
+• No emojis.
+• No "leaving money on the table", no "unlock your potential", no "ROI" claims, no "game-changer".
+• Don't invent dollar amounts or specific metrics.
+• Don't say "you already have X configured" — when a feature is in the "missing" list, it means the client does NOT have it set up yet.
+
+STRUCTURE for the initial email:
+1. "Hi {FirstName}," on its own line.
+2. Short intro: "I am {PM}, from Trade Tech Solutions." and one sentence about helping clients get the most from their setup.
+3. A header line naming the feature (or features if combining), ending with a colon.
+4. Two to four short, declarative lines describing what the feature does and the outcome. Use "Imagine..." as one of them to evoke the outcome, like Revolut does.
+5. One soft, optional closer: "If you find it interesting we can discuss this and more."
+6. CTA exactly: "Through email, phone, or you can book 15 min in my calendar: {BookingLink}"
+7. "Best," then "{PM}" on the next line.
+
+FEATURE CONTEXT for TTS clients (prop firms):
+• Competitions — live events where traders compete on a public leaderboard for prizes. Brings traders back on a deadline, surfaces top performers. Typical cadence: one every 4–6 weeks.
+• Rewards — points system for traders. Creates stickiness between challenges. Configurable per segment.
+• Risk Reports — weekly analytical breakdowns. Catches rule breaches, payout risks, pattern anomalies before they hit the book.
+• University — educational content for traders. Improves conversion and reduces challenge failure rate.
+
+IMPORTANT:
+• Use {FirstName}, {PM}, {Client}, {BookingLink} as placeholders in your output. Do not replace them.
+• Output ONLY a JSON object: {"subject": "...", "body": "..."}. No markdown, no preamble, no code fences.
+• Newlines in the body must be real \\n characters in the JSON string.`;
+
+// ═══════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════
+const REV_FEATS = ['competitions','rewards','risk_reports','university'];
+const LS_DATA = 'tts_ae_data_v15';
+const LS_CONTACTS = 'tts_ae_contacts_v15';
+const LS_SEQUENCES = 'tts_ae_sequences_v15';
+const LS_SETTINGS = 'tts_ae_settings_v15';
+const LS_ACTIVITY = 'tts_ae_activity_v15';
+
+let DATA = [];
+let CONTACTS = {};
+let SEQUENCES = {};
+let ACTIVITY = [];  // [{ id, ts, client, template, step, subject, body, recipients, status, error }]
+let SETTINGS = {
+  oauthClientId: '', senderName: '', bookingLink: '',
+  claudeKey: '', claudeModel: 'claude-sonnet-4-6', aiTone: '',
+  gmailConnected: false,
+  defaultAccounts: 500,
+  competitionsPerMonth: 1,
+  conversionRate: 100
+};
+let sortCol = 'client';
+let sortDir = 'asc';
+let activeFilter = 'all';
+let selected = new Set();
+
+// ═══════════════════════════════════════════════════════════════
+// STORAGE
+// ═══════════════════════════════════════════════════════════════
+function loadAll() {
+  try {
+    const d = localStorage.getItem(LS_DATA);
+    if (d) DATA = JSON.parse(d); else parseCSV(CSV_DEFAULT);
+    CONTACTS = JSON.parse(localStorage.getItem(LS_CONTACTS) || '{}');
+    SEQUENCES = JSON.parse(localStorage.getItem(LS_SEQUENCES) || 'null') || JSON.parse(JSON.stringify(DEFAULT_SEQUENCES));
+    ACTIVITY = JSON.parse(localStorage.getItem(LS_ACTIVITY) || '[]');
+    SETTINGS = { ...SETTINGS, ...JSON.parse(localStorage.getItem(LS_SETTINGS) || '{}') };
+    if (!SETTINGS.aiTone) SETTINGS.aiTone = DEFAULT_TONE;
+    // Migrate old single-email data to multi-email format
+    migrateContacts();
+    // Non-destructive seed: fill empty contacts from the master list
+    let seeded = 0;
+    Object.entries(SEED_CONTACTS).forEach(([slug, seed]) => {
+      const existing = CONTACTS[slug];
+      const hasAny = existing && (existing.contact || (Array.isArray(existing.emails) && existing.emails.length));
+      if (!hasAny) {
+        CONTACTS[slug] = { contact: seed.contact, emails: [...seed.emails], pm: seed.pm };
+        seeded++;
+      }
+    });
+    if (seeded > 0) saveContacts();
+  } catch (e) { console.error(e); }
+}
+
+// Re-apply seed — non-destructive. Fills only empty fields.
+function applySeedContacts() {
+  let filled = 0;
+  Object.entries(SEED_CONTACTS).forEach(([slug, seed]) => {
+    const existing = CONTACTS[slug] || { contact:'', emails:[], pm:'' };
+    if (!Array.isArray(existing.emails)) existing.emails = existing.email ? [existing.email] : [];
+    const merged = {
+      contact: existing.contact || seed.contact,
+      emails:  existing.emails.length > 0 ? existing.emails : [...seed.emails],
+      pm:      existing.pm || seed.pm,
+    };
+    const changed = merged.contact !== existing.contact
+                 || JSON.stringify(merged.emails) !== JSON.stringify(existing.emails)
+                 || merged.pm !== existing.pm;
+    if (changed) filled++;
+    CONTACTS[slug] = merged;
+  });
+  saveContacts();
+  render();
+  toast(filled > 0 ? `Filled ${filled} client${filled!==1?'s':''}` : 'Nothing new to fill', filled > 0 ? 'ok' : '');
+}
+
+// Overwrite seed — replaces any existing contact data with seed values.
+function overwriteSeedContacts() {
+  if (!confirm('Overwrite existing contact data for all 49 seeded clients? Your current edits on those clients will be lost.')) return;
+  let changed = 0;
+  Object.entries(SEED_CONTACTS).forEach(([slug, seed]) => {
+    CONTACTS[slug] = { contact: seed.contact, emails: [...seed.emails], pm: seed.pm };
+    changed++;
+  });
+  saveContacts();
+  render();
+  toast(`Overwrote ${changed} clients with seed data`, 'ok');
+}
+function saveData() { localStorage.setItem(LS_DATA, JSON.stringify(DATA)); }
+function saveContacts() { localStorage.setItem(LS_CONTACTS, JSON.stringify(CONTACTS)); }
+function saveSequences() { localStorage.setItem(LS_SEQUENCES, JSON.stringify(SEQUENCES)); }
+function saveSettings() {
+  SETTINGS.oauthClientId = document.getElementById('oauth-client-id').value.trim();
+  SETTINGS.senderName    = document.getElementById('sender-name').value.trim();
+  SETTINGS.bookingLink   = document.getElementById('booking-link').value.trim();
+  SETTINGS.claudeKey     = document.getElementById('claude-key').value.trim();
+  SETTINGS.claudeModel   = document.getElementById('claude-model').value;
+  SETTINGS.aiTone        = document.getElementById('ai-tone').value;
+  localStorage.setItem(LS_SETTINGS, JSON.stringify(SETTINGS));
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ACTIVITY LOG
+// ═══════════════════════════════════════════════════════════════
+function saveActivity() { localStorage.setItem(LS_ACTIVITY, JSON.stringify(ACTIVITY)); }
+
+function logSend({ client, template, step, subject, body, recipients, status, error }) {
+  const entry = {
+    id: 'a_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+    ts: Date.now(),
+    client, template, step, subject, body,
+    recipients: Array.isArray(recipients) ? recipients : [recipients],
+    status: status || 'sent',
+    error: error || null
+  };
+  ACTIVITY.push(entry);
+  saveActivity();
+  return entry;
+}
+
+// Has this client+template been sent a given step already?
+function hasSent(client, template, step) {
+  return ACTIVITY.some(a => a.client === client && a.template === template && a.step === step && a.status === 'sent');
+}
+
+// Last time client+template initial was sent (null if never)
+function lastInitial(client, template) {
+  const entries = ACTIVITY
+    .filter(a => a.client === client && a.template === template && a.step === 'initial' && a.status === 'sent')
+    .sort((a, b) => b.ts - a.ts);
+  return entries[0] || null;
+}
+
+// Is a follow-up due for this client+template?
+// step: 'fup1' needs initial sent 1+ day ago + no fup1 yet
+// step: 'fup2' needs initial sent 8+ days ago + no fup2 yet
+function isFollowupDue(client, template, step) {
+  const init = lastInitial(client, template);
+  if (!init) return false;
+  if (hasSent(client, template, step)) return false;
+  // Skip if the template's step body is empty (e.g. custom templates without follow-ups)
+  const seq = SEQUENCES[template];
+  if (!seq || !seq[step] || !(seq[step].body || '').trim()) return false;
+  const daysSince = (Date.now() - init.ts) / 86400000;
+  if (step === 'fup1') return daysSince >= 1;
+  if (step === 'fup2') return daysSince >= 8;
+  return false;
+}
+
+// All follow-ups currently due across all clients+templates
+function allDueFollowups() {
+  const due = [];
+  ACTIVITY.forEach(a => {
+    if (a.step !== 'initial' || a.status !== 'sent') return;
+    if (!SEQUENCES[a.template]) return;  // unknown template (smart custom)
+    ['fup1', 'fup2'].forEach(step => {
+      if (isFollowupDue(a.client, a.template, step)) {
+        // dedupe by client+template+step
+        if (!due.find(d => d.client === a.client && d.template === a.template && d.step === step)) {
+          due.push({ client: a.client, template: a.template, step, initialTs: a.ts });
+        }
+      }
+    });
+  });
+  return due.sort((a, b) => a.initialTs - b.initialTs);  // oldest first
+}
+
+function parseCSV(text) {
+  const lines = text.trim().split(/\r?\n/).filter(l => l.trim());
+  const delim = lines[0].includes(';') ? ';' : ',';
+  const headers = lines[0].split(delim).map(h => h.trim());
+  const feats = headers.slice(1);
+  DATA = lines.slice(1).map(l => {
+    const vals = l.split(delim).map(v => v.trim());
+    const obj = { client: vals[0] };
+    feats.forEach((f, i) => obj[f] = vals[i + 1] === 'true');
+    return obj;
+  }).filter(r => r.client && r.client !== 'demo');
+  saveData();
+}
+
+function handleCSV(input) {
+  const f = input.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = e => { parseCSV(e.target.result); setText('csv-status', `${f.name} · ${DATA.length} clients`); render(); toast('CSV loaded', 'ok'); };
+  r.readAsText(f);
+}
+
+function resetLocal() {
+  localStorage.removeItem(LS_DATA);
+  localStorage.removeItem(LS_CONTACTS);
+  parseCSV(CSV_DEFAULT); CONTACTS = {};
+  render(); toast('Reset to defaults', 'ok');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// NAV
+// ═══════════════════════════════════════════════════════════════
+const TITLES = {
+  clients:   ['Clients', ''],
+  sequences: ['Sequences', '5 templates + 1 AI mode'],
+  activity:  ['Activity', 'sent log · follow-ups due · status'],
+  revenue:   ['Revenue', 'forecast · scenarios · opportunity ranking'],
+  setup:     ['Setup', 'Gmail · Claude · sender · booking']
+};
+document.querySelectorAll('.ni').forEach(el => {
+  el.addEventListener('click', () => {
+    const pg = el.dataset.pg;
+    document.querySelectorAll('.ni').forEach(n => n.classList.remove('active'));
+    el.classList.add('active');
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById('pg-' + pg).classList.add('active');
+    const [t, s] = TITLES[pg];
+    document.getElementById('topTitle').innerHTML = `${t}<span class="sub" id="topSub">${s}</span>`;
+    if (pg === 'sequences') renderSeqList();
+    if (pg === 'activity') renderActivity();
+    if (pg === 'revenue') renderRevenue();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════
+// FILTERS + SORT
+// ═══════════════════════════════════════════════════════════════
+document.querySelectorAll('[data-filter]').forEach(b => {
+  b.addEventListener('click', () => {
+    activeFilter = b.dataset.filter;
+    document.querySelectorAll('[data-filter]').forEach(x => x.classList.toggle('on', x.dataset.filter === activeFilter));
+    render();
+  });
+});
+function passesFilter(d) {
+  if (activeFilter === 'all') return true;
+  if (activeFilter === 'no-email') return !hasEmail(d.client);
+  if (activeFilter === 'miss-any') return REV_FEATS.some(f => !d[f]);
+  if (activeFilter.startsWith('miss-')) return !d[activeFilter.substring(5)];
+  return true;
+}
+document.querySelectorAll('.sortable').forEach(th => {
+  th.addEventListener('click', () => {
+    const col = th.dataset.sort;
+    if (sortCol === col) sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+    else { sortCol = col; sortDir = typeof DATA[0][col] === 'boolean' ? 'desc' : 'asc'; }
+    render();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════
+// SELECTION
+// ═══════════════════════════════════════════════════════════════
+function toggleRow(client, on) {
+  if (on) selected.add(client); else selected.delete(client);
+  refreshSelBar();
+  const row = document.querySelector(`tr[data-client="${client}"]`);
+  if (row) row.classList.toggle('sel-row', on);
+}
+function toggleAll(el) {
+  const visible = Array.from(document.querySelectorAll('tr[data-client]')).map(t => t.dataset.client);
+  if (el.checked) visible.forEach(c => selected.add(c));
+  else visible.forEach(c => selected.delete(c));
+  render(); refreshSelBar();
+}
+function clearSelection() { selected.clear(); render(); refreshSelBar(); }
+function refreshSelBar() {
+  const bar = document.getElementById('sel-bar');
+  setText('sel-count', selected.size);
+  bar.classList.toggle('show', selected.size > 0);
+  // Update button style for smart mode
+  const sel = document.getElementById('sel-sequence');
+  const btn = document.getElementById('preview-btn');
+  btn.classList.toggle('smart', sel.value === 'smart');
+  btn.textContent = sel.value === 'smart' ? '✦ Draft with AI' : 'Preview & send';
+}
+document.getElementById('sel-sequence').addEventListener('change', refreshSelBar);
+
+// ═══════════════════════════════════════════════════════════════
+// RENDER CLIENTS
+// ═══════════════════════════════════════════════════════════════
+function getContact(slug) {
+  const c = CONTACTS[slug] || {};
+  let emails = Array.isArray(c.emails) ? c.emails : (c.email ? [c.email] : []);
+  emails = emails.filter(e => e && e.trim());
+  return { contact: c.contact || '', emails, pm: c.pm || '' };
+}
+function primaryEmail(slug) { return getContact(slug).emails[0] || ''; }
+function hasEmail(slug) { return getContact(slug).emails.length > 0; }
+function emailCount(slug) { return getContact(slug).emails.length; }
+
+function updateContact(slug, field, value) {
+  const c = CONTACTS[slug] = CONTACTS[slug] || { contact:'', emails:[], pm:'' };
+  if (!Array.isArray(c.emails)) c.emails = c.email ? [c.email] : [];
+  c[field] = value;
+  delete c.email;
+  saveContacts();
+  updateCounts();
+}
+
+// Multi-email management
+function updateEmailAt(slug, idx, val) {
+  const c = CONTACTS[slug] = CONTACTS[slug] || { contact:'', emails:[], pm:'' };
+  if (!Array.isArray(c.emails)) c.emails = c.email ? [c.email] : [];
+  const trimmed = (val || '').trim();
+  if (!trimmed) {
+    c.emails.splice(idx, 1);
+  } else {
+    c.emails[idx] = trimmed;
+  }
+  delete c.email;
+  saveContacts();
+  render();
+}
+
+function removeEmailAt(slug, idx) {
+  const c = CONTACTS[slug];
+  if (!c || !Array.isArray(c.emails)) return;
+  c.emails.splice(idx, 1);
+  delete c.email;
+  saveContacts();
+  render();
+}
+
+function addEmailTo(slug, val) {
+  const c = CONTACTS[slug] = CONTACTS[slug] || { contact:'', emails:[], pm:'' };
+  if (!Array.isArray(c.emails)) c.emails = c.email ? [c.email] : [];
+  const trimmed = (val || '').trim();
+  if (trimmed) {
+    c.emails.push(trimmed);
+  } else {
+    c.emails.push('');
+  }
+  delete c.email;
+  saveContacts();
+  render();
+  if (!trimmed) {
+    setTimeout(() => {
+      const inputs = document.querySelectorAll(`tr[data-client="${slug}"] .email-stack input`);
+      if (inputs.length) inputs[inputs.length - 1].focus();
+    }, 50);
+  }
+}
+
+function migrateContacts() {
+  let changed = false;
+  Object.entries(CONTACTS).forEach(([slug, c]) => {
+    if (!c) return;
+    if (!Array.isArray(c.emails)) {
+      c.emails = c.email ? [c.email] : [];
+      changed = true;
+    }
+    if ('email' in c) { delete c.email; changed = true; }
+  });
+  if (changed) saveContacts();
+}
+
+function render() {
+  const q = (document.getElementById('q')?.value || '').toLowerCase();
+  let rows = DATA.filter(d => d.client.toLowerCase().includes(q)).filter(passesFilter);
+  rows.sort((a, b) => {
+    if (sortCol === 'mrr') {
+      const av = potentialMRR(a.client), bv = potentialMRR(b.client);
+      return sortDir === 'asc' ? av - bv : bv - av;
+    }
+    const av = a[sortCol], bv = b[sortCol];
+    if (typeof av === 'boolean') return sortDir === 'asc' ? (av === bv ? 0 : av ? 1 : -1) : (av === bv ? 0 : av ? -1 : 1);
+    return sortDir === 'asc' ? String(av).localeCompare(String(bv)) : String(bv).localeCompare(String(av));
+  });
+  document.querySelectorAll('#client-table th').forEach(th => { th.classList.remove('asc','desc'); if (th.dataset.sort === sortCol) th.classList.add(sortDir); });
+
+  const tb = document.getElementById('client-tbody');
+  if (!rows.length) {
+    tb.innerHTML = `<tr><td colspan="10" class="empty-state"><div class="ei">Nothing here</div><div>Adjust filters or search.</div></td></tr>`;
+  } else {
+    tb.innerHTML = rows.map(d => {
+      const c = getContact(d.client);
+      const checked = selected.has(d.client);
+      const dot = v => v ? '<span class="st on">●</span>' : '<span class="st">○</span>';
+      return `
+        <tr data-client="${d.client}" class="${checked ? 'sel-row' : ''}">
+          <td><input type="checkbox" class="chk" ${checked?'checked':''} onclick="toggleRow('${d.client}', this.checked)"></td>
+          <td><span class="cname">${d.client}</span></td>
+          <td><input class="ie ${c.contact?'':'empty'}" value="${escapeHtml(c.contact||'')}" placeholder="name" onchange="updateContact('${d.client}','contact',this.value); this.classList.toggle('empty', !this.value)"></td>
+          <td>
+            <div class="email-stack">
+              ${c.emails.length ? c.emails.map((em, i) => `
+                <div class="email-row">
+                  <input class="ie mono" type="email" value="${escapeHtml(em)}" placeholder="email@…" onchange="updateEmailAt('${d.client}', ${i}, this.value)">
+                  <button class="email-x" onclick="removeEmailAt('${d.client}', ${i})" title="Remove this email">×</button>
+                </div>
+              `).join('') : `
+                <div class="email-row">
+                  <input class="ie mono empty" type="email" placeholder="email@…" onchange="if(this.value.trim()) addEmailTo('${d.client}', this.value)">
+                </div>
+              `}
+              <button class="email-add" onclick="addEmailTo('${d.client}')">+ email</button>
+            </div>
+          </td>
+          <td><input class="ie ${c.pm?'':'empty'}" value="${escapeHtml(c.pm||'')}" placeholder="PM" onchange="updateContact('${d.client}','pm',this.value); this.classList.toggle('empty', !this.value)"></td>
+          <td style="text-align:center">${dot(d.competitions)}</td>
+          <td style="text-align:center">${dot(d.rewards)}</td>
+          <td style="text-align:center">${dot(d.risk_reports)}</td>
+          <td style="text-align:center">${dot(d.university)}</td>
+          <td style="text-align:right"><button class="btx" onclick="removeClient('${d.client}')" title="Remove">✕</button></td>
+        </tr>`;
+    }).join('');
+  }
+  updateCounts();
+}
+
+function updateCounts() {
+  const q = (document.getElementById('q')?.value || '').toLowerCase();
+  const visible = DATA.filter(d => d.client.toLowerCase().includes(q)).filter(passesFilter).length;
+  setText('cn-clients', DATA.length);
+  setText('visible-count', visible);
+  setText('st-total', DATA.length);
+  const withEmail = DATA.filter(d => hasEmail(d.client)).length;
+  setText('st-email', withEmail);
+  setText('st-email-pct', DATA.length ? Math.round(withEmail / DATA.length * 100) + '%' : '0%');
+  const missC = DATA.filter(d => !d.competitions).length;
+  const missR = DATA.filter(d => !d.rewards).length;
+  const missRk = DATA.filter(d => !d.risk_reports).length;
+  const missAny = DATA.filter(d => REV_FEATS.some(f => !d[f])).length;
+  setText('st-missc', missC);
+  setText('st-missr', missR);
+  setText('st-missrk', missRk);
+  setText('cnt-all', DATA.length);
+  setText('cnt-missc', missC);
+  setText('cnt-missr', missR);
+  setText('cnt-missrk', missRk);
+  setText('cnt-missany', missAny);
+  setText('cnt-noemail', DATA.filter(d => !hasEmail(d.client)).length);
+  setText('cn-activity', ACTIVITY.length);
+  setText('topSub', `${DATA.length} clients · ${withEmail} with email`);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ADD / REMOVE / EXPORT
+// ═══════════════════════════════════════════════════════════════
+function openAddClient() {
+  ['ac-name','ac-contact','ac-email','ac-pm'].forEach(id => setValue(id, ''));
+  document.getElementById('mv-add').classList.add('show');
+  setTimeout(() => document.getElementById('ac-name').focus(), 60);
+}
+function submitAddClient() {
+  const slug = document.getElementById('ac-name').value.trim().toLowerCase().replace(/\s+/g,'');
+  if (!slug) { toast('Name required', 'bad'); return; }
+  if (DATA.find(d => d.client === slug)) { toast('Client already exists', 'bad'); return; }
+  const newRow = { client: slug };
+  Object.keys(DATA[0] || {}).forEach(k => { if (k !== 'client') newRow[k] = false; });
+  DATA.push(newRow);
+  const emailVal = document.getElementById('ac-email').value.trim();
+  CONTACTS[slug] = {
+    contact: document.getElementById('ac-contact').value.trim(),
+    emails:  emailVal ? [emailVal] : [],
+    pm:      document.getElementById('ac-pm').value.trim()
+  };
+  saveData(); saveContacts();
+  closeModal('mv-add');
+  render();
+  toast(`${slug} added`, 'ok');
+}
+function removeClient(slug) {
+  if (!confirm(`Remove ${slug}?`)) return;
+  DATA = DATA.filter(d => d.client !== slug);
+  delete CONTACTS[slug];
+  selected.delete(slug);
+  saveData(); saveContacts();
+  render(); refreshSelBar();
+  toast(`${slug} removed`);
+}
+function exportCSV() {
+  const headers = ['client','contact','emails','pm','mrr', ...REV_FEATS];
+  const rows = DATA.map(d => {
+    const c = getContact(d.client);
+    return [d.client, c.contact||'', c.emails.join('; '), c.pm||'', potentialMRR(d.client), ...REV_FEATS.map(f => d[f]?'true':'false')].map(v => `"${String(v).replace(/"/g,'""')}"`).join(',');
+  });
+  const csv = headers.join(',') + '\n' + rows.join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `tts_clients_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  toast('Exported', 'ok');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SEQUENCES
+// ═══════════════════════════════════════════════════════════════
+let activeSeq = 'competitions';
+
+function renderSeqList() {
+  const el = document.getElementById('seq-list');
+  const builtins = Object.entries(SEQUENCES).filter(([id, s]) => !s.isCustom);
+  const customs = Object.entries(SEQUENCES).filter(([id, s]) => s.isCustom);
+
+  const renderItem = (id, s, isCustom) => `
+    <div class="seq-item ${id === activeSeq ? 'active' : ''} ${isCustom ? 'custom' : ''}" data-id="${id}">
+      <div class="tn">${escapeHtml(s.name)}${isCustom ? ' <span class="sb-tag" style="background:var(--off);color:var(--mu);border:1px solid var(--off-br)">Custom</span>' : ''}</div>
+      <div class="td">${escapeHtml(s.desc || '')}</div>
+    </div>`;
+
+  const items = [];
+  builtins.forEach(([id, s]) => items.push(renderItem(id, s, false)));
+  // Smart mode card
+  items.push(`
+    <div class="seq-item smart ${activeSeq === 'smart' ? 'active' : ''}" data-id="smart">
+      <div class="tn">Smart <span class="sb-tag">✦ AI</span></div>
+      <div class="td">One-off custom email. Type or paste anything — AI can polish it if you want.</div>
+    </div>
+  `);
+  // Custom templates
+  if (customs.length) {
+    items.push(`<div class="seq-separator">Your custom templates</div>`);
+    customs.forEach(([id, s]) => items.push(renderItem(id, s, true)));
+  }
+  el.innerHTML = items.join('');
+  el.querySelectorAll('.seq-item').forEach(it => {
+    it.addEventListener('click', () => { activeSeq = it.dataset.id; renderSeqList(); });
+  });
+  // Update counts
+  const totalCount = builtins.length + customs.length;
+  setText('seq-cnt-x', `${builtins.length} built-in · ${customs.length} custom · 1 smart`);
+  setText('cn-sequences', totalCount + 1);
+  renderSeqEditor();
+}
+
+function renderSeqEditor() {
+  // Handle custom templates — they have editable name + delete button
+  if (activeSeq && activeSeq.startsWith('custom_') && SEQUENCES[activeSeq]) {
+    const s = SEQUENCES[activeSeq];
+    const blocks = [
+      { id: 'initial', label: 'Email', delay: 'on send', required: true },
+      { id: 'fup1',    label: 'Follow-up 1',  delay: '+1 day (optional)', required: false },
+      { id: 'fup2',    label: 'Follow-up 2',  delay: '+8 days (optional)', required: false }
+    ];
+    const phs = ['{FirstName}','{PM}','{Client}','{BookingLink}'];
+    document.getElementById('seq-editor').innerHTML = `
+      <div class="editor-stack">
+        <div class="editor-block">
+          <div class="eh">
+            <div style="flex:1">
+              <input class="fi2" id="custom-name" value="${escapeHtml(s.name)}" placeholder="Template name" style="font-family:'Syne',sans-serif;font-weight:700;font-size:13px;padding:6px 10px" oninput="renameCustomTemplate('${activeSeq}', this.value)">
+              <input class="fi2" id="custom-desc" value="${escapeHtml(s.desc || '')}" placeholder="Short description (optional)" style="margin-top:6px;font-size:11px;color:var(--mu)" oninput="SEQUENCES['${activeSeq}'].desc = this.value; saveSequences(); renderSeqList()">
+            </div>
+            <button class="btn bo bsm" style="margin-left:10px;color:var(--bad);border-color:rgba(239,68,68,.25)" onclick="deleteCustomTemplate('${activeSeq}')">Delete</button>
+          </div>
+        </div>
+        ${blocks.map(b => `
+          <div class="editor-block">
+            <div class="eh"><div class="et">${b.label}${b.required ? '' : ' <span style="color:var(--mu2);font-weight:400">· leave blank to skip</span>'}</div><div class="edelay">${b.delay}</div></div>
+            <div class="eb">
+              <div class="fg"><label class="fl">Subject</label><input class="fi2" data-step="${b.id}" data-field="subject" value="${escapeHtml(s[b.id].subject)}" oninput="saveSeqField('${b.id}','subject',this.value)"></div>
+              <div class="fg">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+                  <label class="fl" style="margin:0">Body</label>
+                  <button class="btn bsm" style="background:var(--ai-bg);color:var(--ai);padding:4px 10px;font-size:10px" onclick="aiImproveTemplate('${activeSeq}','${b.id}')">✦ AI improve</button>
+                </div>
+                <textarea class="fi2 ${b.id === 'initial' ? 'tall' : ''}" data-step="${b.id}" data-field="body" oninput="saveSeqField('${b.id}','body',this.value)">${escapeHtml(s[b.id].body)}</textarea>
+                ${b.id === 'initial' ? `<div class="placeholder-hints">${phs.map(p => `<span class="ph" onclick="insertPlaceholder('${b.id}','${p}')">${p}</span>`).join('')}</div>` : ''}
+              </div>
+            </div>
+          </div>`).join('')}
+      </div>`;
+    return;
+  }
+
+  if (activeSeq === 'smart') {
+    document.getElementById('seq-editor').innerHTML = `
+      <div class="card">
+        <div class="ch"><div><div class="ct">Smart mode · AI-drafted per client</div><div class="cs">requires a Claude API key in Setup</div></div></div>
+        <div class="cb">
+          <div class="ai-note" style="margin:0 0 14px">
+            <div>Smart mode doesn't use a fixed template. When you select clients and choose Smart in the Clients tab, the AI drafts one email per "missing features profile" — so a client missing Competitions + Rewards gets one combined email, a client missing only Competitions gets a single-feature one.</div>
+          </div>
+          <div class="fg">
+            <label class="fl">System tone / style guide</label>
+            <textarea class="fi2 xtall" id="sm-tone" oninput="saveSmartTone(this.value)">${escapeHtml(SETTINGS.aiTone || DEFAULT_TONE)}</textarea>
+            <div class="footnote" style="margin-top:8px">This is the system prompt sent with every AI draft request. Edit it to shape the AI's voice. Resets if you clear local data.</div>
+          </div>
+          <div class="fg">
+            <label class="fl">Model</label>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--ai)" id="sm-model-display">${escapeHtml(SETTINGS.claudeModel)}</div>
+            <div class="footnote" style="margin-top:8px">Change the model in Setup → Claude AI.</div>
+          </div>
+        </div>
+      </div>`;
+    return;
+  }
+  const s = SEQUENCES[activeSeq];
+  if (!s) return;
+  const blocks = [
+    { id: 'initial', label: 'Initial email', delay: 'on trigger' },
+    { id: 'fup1',    label: 'Follow-up 1',  delay: '+1 day' },
+    { id: 'fup2',    label: 'Follow-up 2',  delay: '+8 days' }
+  ];
+  const phs = ['{FirstName}','{PM}','{Client}','{BookingLink}'];
+  document.getElementById('seq-editor').innerHTML = `
+    <div class="editor-stack">
+      ${blocks.map(b => `
+        <div class="editor-block">
+          <div class="eh"><div class="et">${b.label}</div><div class="edelay">${b.delay}</div></div>
+          <div class="eb">
+            <div class="fg"><label class="fl">Subject</label><input class="fi2" data-step="${b.id}" data-field="subject" value="${escapeHtml(s[b.id].subject)}" oninput="saveSeqField('${b.id}','subject',this.value)"></div>
+            <div class="fg">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+                <label class="fl" style="margin:0">Body</label>
+                <button class="btn bsm" style="background:var(--ai-bg);color:var(--ai);padding:4px 10px;font-size:10px" onclick="aiImproveTemplate('${activeSeq}','${b.id}')">✦ AI improve</button>
+              </div>
+              <textarea class="fi2 ${b.id === 'initial' ? 'tall' : ''}" data-step="${b.id}" data-field="body" oninput="saveSeqField('${b.id}','body',this.value)">${escapeHtml(s[b.id].body)}</textarea>
+              ${b.id === 'initial' ? `<div class="placeholder-hints">${phs.map(p => `<span class="ph" onclick="insertPlaceholder('${b.id}','${p}')">${p}</span>`).join('')}</div>` : ''}
+            </div>
+          </div>
+        </div>`).join('')}
+    </div>`;
+}
+
+function saveSmartTone(val) {
+  SETTINGS.aiTone = val;
+  localStorage.setItem(LS_SETTINGS, JSON.stringify(SETTINGS));
+}
+
+function saveSeqField(step, field, value) { SEQUENCES[activeSeq][step][field] = value; saveSequences(); }
+function insertPlaceholder(step, ph) {
+  const ta = document.querySelector(`textarea[data-step="${step}"][data-field="body"]`);
+  if (!ta) return;
+  const pos = ta.selectionStart || ta.value.length;
+  ta.value = ta.value.substring(0, pos) + ph + ta.value.substring(pos);
+  saveSeqField(step, 'body', ta.value);
+  ta.focus();
+  ta.selectionStart = ta.selectionEnd = pos + ph.length;
+}
+
+async function aiImproveTemplate(seqId, stepId) {
+  if (!SETTINGS.claudeKey) { toast('Add your Claude API key in Setup', 'bad'); return; }
+  const seq = SEQUENCES[seqId]; if (!seq) return;
+  const step = seq[stepId]; if (!step) return;
+  const body = step.body || '';
+  const subj = step.subject || '';
+  if (!body.trim()) { toast('Body is empty — write something first', 'bad'); return; }
+
+  toast('AI improving template…', '');
+  const system = SETTINGS.aiTone || DEFAULT_TONE;
+  const user = `Improve this B2B outreach email template. Keep the core message but rewrite in the style guide voice.
+
+RULES:
+- Preserve ALL {FirstName}, {PM}, {Client}, {BookingLink} placeholders exactly.
+- Output ONLY a JSON object: {"subject": "...", "body": "..."}. No preamble, no code fences.
+
+CURRENT SUBJECT: ${subj}
+
+CURRENT BODY:
+${body}`;
+
+  try {
+    const raw = await callClaude(system, user);
+    const parsed = parseDraft(raw);
+    if (parsed.subject) SEQUENCES[seqId][stepId].subject = parsed.subject;
+    if (parsed.body)    SEQUENCES[seqId][stepId].body    = parsed.body;
+    saveSequences();
+    renderSeqEditor();
+    toast('Template improved — review before saving', 'ok');
+  } catch (e) {
+    console.error(e);
+    toast('AI improve failed: ' + (e.message || e), 'bad');
+  }
+}
+function resetSequences() {
+  if (!confirm('Reset built-in templates to defaults? Your custom templates will NOT be affected.')) return;
+  // Keep customs, reset built-ins
+  const customs = {};
+  Object.entries(SEQUENCES).forEach(([id, s]) => { if (s.isCustom) customs[id] = s; });
+  SEQUENCES = { ...JSON.parse(JSON.stringify(DEFAULT_SEQUENCES)), ...customs };
+  saveSequences();
+  populateSequenceDropdown();
+  populateActivityFilter();
+  renderSeqList();
+  toast('Built-in sequences reset', 'ok');
+}
+
+function createCustomTemplate() {
+  const name = prompt('Name this template (e.g., "Q4 Party Invite", "Product Launch", "Year-end thanks")');
+  if (!name || !name.trim()) return;
+  const id = 'custom_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  SEQUENCES[id] = {
+    name: name.trim(),
+    desc: 'Custom broadcast',
+    isCustom: true,
+    initial: {
+      subject: '',
+      body: `Hi {FirstName},\n\n\n\nBest,\n{PM}`
+    },
+    fup1: { subject: '', body: '' },
+    fup2: { subject: '', body: '' }
+  };
+  activeSeq = id;
+  saveSequences();
+  populateSequenceDropdown();
+  populateActivityFilter();
+  renderSeqList();
+  toast('Template created — edit and send', 'ok');
+  setTimeout(() => {
+    const subj = document.querySelector('input[data-step="initial"][data-field="subject"]');
+    if (subj) subj.focus();
+  }, 80);
+}
+
+function deleteCustomTemplate(id) {
+  const seq = SEQUENCES[id];
+  if (!seq || !seq.isCustom) return;
+  if (!confirm(`Delete "${seq.name}"? This cannot be undone.\n\nNote: past sends of this template remain in Activity.`)) return;
+  delete SEQUENCES[id];
+  if (activeSeq === id) activeSeq = 'competitions';
+  saveSequences();
+  populateSequenceDropdown();
+  populateActivityFilter();
+  renderSeqList();
+  toast(`"${seq.name}" deleted`, 'ok');
+}
+
+function renameCustomTemplate(id, newName) {
+  const seq = SEQUENCES[id];
+  if (!seq || !seq.isCustom) return;
+  const trimmed = (newName || '').trim();
+  if (trimmed) {
+    seq.name = trimmed;
+    saveSequences();
+    // refresh the list item text but don't re-render editor (would lose focus)
+    populateSequenceDropdown();
+    populateActivityFilter();
+    // Update just the active item's name in the list without full re-render
+    const activeItem = document.querySelector(`.seq-item[data-id="${id}"] .tn`);
+    if (activeItem) {
+      activeItem.innerHTML = escapeHtml(trimmed) + ' <span class="sb-tag" style="background:var(--off);color:var(--mu);border:1px solid var(--off-br)">Custom</span>';
+    }
+  }
+}
+
+function populateSequenceDropdown() {
+  const sel = byId('sel-sequence');
+  if (!sel) return;
+  const current = sel.value;
+  const builtins = Object.entries(SEQUENCES).filter(([id, s]) => !s.isCustom);
+  const customs = Object.entries(SEQUENCES).filter(([id, s]) => s.isCustom);
+  let html = '<option value="">Choose sequence…</option>';
+  html += '<option value="smart">✦ Smart — one-off custom email</option>';
+  html += '<optgroup label="Built-in templates">';
+  builtins.forEach(([id, s]) => { html += `<option value="${id}">${escapeHtml(s.name)}</option>`; });
+  html += '</optgroup>';
+  if (customs.length) {
+    html += '<optgroup label="Your custom templates">';
+    customs.forEach(([id, s]) => { html += `<option value="${id}">${escapeHtml(s.name)}</option>`; });
+    html += '</optgroup>';
+  }
+  sel.innerHTML = html;
+  if (current) sel.value = current;
+}
+
+function populateActivityFilter() {
+  const sel = byId('act-template-filter');
+  if (!sel) return;
+  const current = sel.value;
+  const builtins = Object.entries(SEQUENCES).filter(([id, s]) => !s.isCustom);
+  const customs = Object.entries(SEQUENCES).filter(([id, s]) => s.isCustom);
+  let html = '<option value="">All templates</option>';
+  builtins.forEach(([id, s]) => { html += `<option value="${id}">${escapeHtml(s.name)}</option>`; });
+  html += '<option value="smart">Smart (one-off)</option>';
+  customs.forEach(([id, s]) => { html += `<option value="${id}">${escapeHtml(s.name)} (custom)</option>`; });
+  sel.innerHTML = html;
+  if (current) sel.value = current;
+}
+function escapeHtml(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ═══════════════════════════════════════════════════════════════
+// PERSONALISE
+// ═══════════════════════════════════════════════════════════════
+function personalise(text, slug) {
+  const c = getContact(slug);
+  const firstName = (c.contact || '').split(' ')[0] || 'there';
+  return (text || '').replace(/{FirstName}/g, firstName)
+    .replace(/{PM}/g, c.pm || SETTINGS.senderName || 'your PM')
+    .replace(/{Client}/g, slug)
+    .replace(/{BookingLink}/g, SETTINGS.bookingLink || '[add your booking link in Setup]');
+}
+
+function missingFeaturesFor(slug) {
+  const d = DATA.find(x => x.client === slug);
+  if (!d) return [];
+  return REV_FEATS.filter(f => !d[f]);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SEND MODAL
+// ═══════════════════════════════════════════════════════════════
+let SEND_CTX = null;
+
+function openSendModal() {
+  const seqId = document.getElementById('sel-sequence').value;
+  if (!seqId) { toast('Pick a sequence first', 'bad'); return; }
+  if (!selected.size) { toast('Select at least one client', 'bad'); return; }
+
+  const recipients = Array.from(selected).map(slug => {
+    const c = getContact(slug);
+    return { slug, contact: c.contact, emails: c.emails, pm: c.pm, ok: c.emails.length > 0, missing: missingFeaturesFor(slug), mrr: potentialMRR(slug) };
+  });
+  const withEmail = recipients.filter(r => r.ok);
+  const noEmail = recipients.filter(r => !r.ok);
+
+  if (seqId === 'smart') {
+    if (!SETTINGS.claudeKey) { toast('Add your Claude API key in Setup', 'bad'); return; }
+    renderSmartModal(recipients, withEmail, noEmail);
+  } else {
+    renderTemplateModal(seqId, recipients, withEmail, noEmail);
+  }
+  document.getElementById('mv-send').classList.add('show');
+}
+
+function renderTemplateModal(seqId, recipients, withEmail, noEmail) {
+  const seq = SEQUENCES[seqId];
+  setText('mv-send-sub', `${seq.name} · ${recipients.length} client${recipients.length!==1?'s':''}`);
+  const preview = withEmail[0] || recipients[0];
+  const previewBody = preview ? personalise(seq.initial.body, preview.slug) : seq.initial.body;
+  const previewSubject = preview ? personalise(seq.initial.subject, preview.slug) : seq.initial.subject;
+
+  document.getElementById('mv-send-body').innerHTML = `
+    <div class="privacy-note">
+      <div><strong>Each client gets their own separate email.</strong> Different companies never see each other — each is a separate send. Within a company, multiple contacts are CC'd so they see each other (normal B2B thread).</div>
+    </div>
+
+    ${noEmail.length ? `<div class="warn-note" style="margin-top:12px"><div><strong>${noEmail.length}</strong> client${noEmail.length!==1?'s':''} without email (${noEmail.map(r=>r.slug).join(', ')}) will be skipped. Add emails in the Clients table to include them.</div></div>` : ''}
+
+    <div style="font-family:'Syne',sans-serif;font-size:10px;font-weight:700;color:var(--mu);letter-spacing:.08em;text-transform:uppercase;margin:${noEmail.length?'6px':'14px'} 0 8px">Recipients (${recipients.length})</div>
+    <div class="rcp-list">
+      ${recipients.map(r => `
+        <div class="rcp ${r.ok?'':'no-email'}">
+          <div class="rn">${r.slug}</div>
+          <div class="re">
+            ${r.emails.length
+              ? r.emails.map((e, i) => `<div class="re-line">${i===0 ? '<span class="tag-to">To</span>' : '<span class="tag-cc">Cc</span>'} ${escapeHtml(e)}</div>`).join('')
+              : '<div class="re-line" style="color:var(--warn);font-style:italic">no email on file</div>'}
+          </div>
+          <div class="rs ${r.ok?'ok':'warn'}">${r.ok?'ready':'skip'}</div>
+        </div>`).join('')}
+    </div>
+
+    <div style="font-family:'Syne',sans-serif;font-size:10px;font-weight:700;color:var(--mu);letter-spacing:.08em;text-transform:uppercase;margin:14px 0 8px">Preview${preview ? ` · personalised for ${preview.slug}` : ''}</div>
+    <div class="pv-preview">
+      <div class="pv-head"><span>Subject: <strong style="color:var(--tx)">${escapeHtml(previewSubject)}</strong></span><span>From: ${escapeHtml(SETTINGS.senderName || '[your sender name]')}</span></div>
+      <div class="pv-body">${escapeHtml(previewBody)}</div>
+    </div>
+
+    <div class="footnote">Follow-ups fire manually for now (re-select these clients in +1 day / +8 days). Auto-scheduler is a next-step backend addition.</div>
+  `;
+  setText('mv-send-count', `${withEmail.length}/${recipients.length} will send`);
+  document.getElementById('btn-send-now').disabled = !withEmail.length;
+  setText('btn-send-now', 'Send initial email');
+  SEND_CTX = { mode: 'template', seqId, recipients: withEmail };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SMART MODE — paste your draft, AI improves it, send to all
+// ═══════════════════════════════════════════════════════════════
+function renderSmartModal(recipients, withEmail, noEmail) {
+  byId('mv-send-sub').textContent = `Smart · ${recipients.length} client${recipients.length!==1?'s':''}`;
+
+  byId('mv-send-body').innerHTML = `
+    <div class="privacy-note"><div><strong>Each client gets their own separate email.</strong> Within a company, multiple contacts are CC'd (they see each other). Across companies, totally isolated — different companies NEVER see each other, even when sent together.</div></div>
+    ${noEmail.length ? `<div class="warn-note" style="margin-top:12px"><div><strong>${noEmail.length}</strong> client${noEmail.length!==1?'s':''} without email (${noEmail.map(r=>r.slug).join(', ')}) will be skipped.</div></div>` : ''}
+
+    <div class="ai-note" style="margin-top:12px">
+      <div><strong>Smart flow:</strong> write your draft below (or paste something rough), click <strong>✦ AI improve</strong>, review the result, then send. One email — personalised per client with {FirstName}, {PM}, {Client}, {BookingLink}.</div>
+    </div>
+
+    <div class="fg" style="margin-top:14px">
+      <label class="fl">Subject</label>
+      <input class="fi2" id="smart-subject" placeholder="e.g. Competitions on {Client}" value="">
+    </div>
+
+    <div class="fg">
+      <label class="fl">Body <span style="color:var(--mu2);font-weight:400">· write rough, let AI polish</span></label>
+      <textarea class="fi2 tall" id="smart-body" placeholder="Write your draft here. Can be bullet points, half-sentences, whatever. The AI will turn it into a polished Revolut-grade email.
+
+Examples:
+- hey, wanted to show you what we can do with competitions
+- mention the leaderboard, trader retention
+- soft CTA, book 15 min"></textarea>
+      <div class="placeholder-hints">
+        <span class="ph" onclick="insertSmartPlaceholder('{FirstName}')">{FirstName}</span>
+        <span class="ph" onclick="insertSmartPlaceholder('{PM}')">{PM}</span>
+        <span class="ph" onclick="insertSmartPlaceholder('{Client}')">{Client}</span>
+        <span class="ph" onclick="insertSmartPlaceholder('{BookingLink}')">{BookingLink}</span>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;align-items:center;margin:10px 0 12px">
+      <button class="btn bai" id="btn-ai-improve" onclick="aiImproveSmart()">✦ AI improve</button>
+      <button class="btn bo bsm" onclick="aiGenerateFromScratch()">✦ Write from scratch</button>
+      <div style="font-size:11px;color:var(--mu);font-family:'JetBrains Mono',monospace" id="ai-status"></div>
+    </div>
+
+    ${recipients.length ? `
+    <div style="font-family:'Syne',sans-serif;font-size:10px;font-weight:700;color:var(--mu);letter-spacing:.08em;text-transform:uppercase;margin:14px 0 8px">Recipients (${recipients.length} separate emails will be sent)</div>
+    <div class="rcp-list">
+      ${recipients.map(r => `
+        <div class="rcp ${r.ok?'':'no-email'}">
+          <div class="rn">${r.slug}</div>
+          <div class="re">
+            ${r.emails.length
+              ? r.emails.map((e, i) => `<div class="re-line">${i===0 ? '<span class="tag-to">To</span>' : '<span class="tag-cc">Cc</span>'} ${escapeHtml(e)}</div>`).join('')
+              : '<div class="re-line" style="color:var(--warn);font-style:italic">no email on file</div>'}
+          </div>
+          <div class="rs ${r.ok?'ok':'warn'}">${r.ok?'ready':'skip'}</div>
+        </div>`).join('')}
+    </div>` : ''}
+  `;
+
+  byId('mv-send-count').textContent = `${withEmail.length}/${recipients.length} will send`;
+  const sendBtn = byId('btn-send-now');
+  sendBtn.disabled = withEmail.length === 0;
+  sendBtn.textContent = `Send ${withEmail.length} email${withEmail.length!==1?'s':''}`;
+  SEND_CTX = { mode: 'smart', recipients: withEmail, subject: '', body: '' };
+
+  // Hook subject/body inputs to keep SEND_CTX in sync
+  byId('smart-subject').addEventListener('input', e => { SEND_CTX.subject = e.target.value; });
+  byId('smart-body').addEventListener('input', e => { SEND_CTX.body = e.target.value; });
+}
+
+function insertSmartPlaceholder(ph) {
+  const ta = byId('smart-body');
+  if (!ta) return;
+  const pos = ta.selectionStart || ta.value.length;
+  ta.value = ta.value.substring(0, pos) + ph + ta.value.substring(pos);
+  SEND_CTX.body = ta.value;
+  ta.focus();
+  ta.selectionStart = ta.selectionEnd = pos + ph.length;
+}
+
+async function aiImproveSmart() {
+  if (!SETTINGS.claudeKey) { toast('Add your Claude API key in Setup', 'bad'); return; }
+  const subj = byId('smart-subject').value.trim();
+  const draft = byId('smart-body').value.trim();
+  if (!draft) { toast('Write something first — or click "Write from scratch"', 'bad'); return; }
+
+  const btn = byId('btn-ai-improve');
+  const status = byId('ai-status');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner-ai"></span> Improving…';
+  status.textContent = '';
+
+  const system = SETTINGS.aiTone || DEFAULT_TONE;
+  const user = `Improve this B2B outreach email. Keep the core message and intent, but rewrite it in the style guide's voice.
+
+RULES:
+- Keep any {FirstName}, {PM}, {Client}, {BookingLink} placeholders EXACTLY as they appear. Don't replace them.
+- If the draft is rough (bullets, half-sentences), turn it into a proper email.
+- If no subject is given, write a short one.
+- Output ONLY a JSON object: {"subject": "...", "body": "..."}. No preamble, no code fences.
+
+CURRENT SUBJECT: ${subj || '(none — write one)'}
+
+CURRENT DRAFT:
+${draft}`;
+
+  try {
+    const raw = await callClaude(system, user);
+    const parsed = parseDraft(raw);
+    setValue('smart-subject', parsed.subject || '');
+    setValue('smart-body', parsed.body || '');
+    SEND_CTX.subject = parsed.subject || '';
+    SEND_CTX.body = parsed.body || '';
+    status.textContent = 'Improved ✓';
+    toast('AI draft ready — review and edit before sending', 'ok');
+  } catch (e) {
+    console.error(e);
+    status.textContent = '';
+    toast('AI improve failed: ' + (e.message || e), 'bad');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '✦ AI improve';
+  }
+}
+
+async function aiGenerateFromScratch() {
+  if (!SETTINGS.claudeKey) { toast('Add your Claude API key in Setup', 'bad'); return; }
+  const brief = prompt('What should this email be about? (one sentence, e.g. "Pitch competitions to prop firms who don\'t run them")');
+  if (!brief) return;
+
+  const btn = byId('btn-ai-improve');
+  const status = byId('ai-status');
+  btn.disabled = true; btn.textContent = '✦ AI improve';
+  status.innerHTML = '<span class="spinner-ai"></span> Generating…';
+
+  const system = SETTINGS.aiTone || DEFAULT_TONE;
+  const user = `Write a new B2B outreach email from scratch.
+
+BRIEF: ${brief}
+
+RULES:
+- Use {FirstName}, {PM}, {Client}, {BookingLink} as placeholders — they'll be replaced per recipient.
+- Output ONLY a JSON object: {"subject": "...", "body": "..."}. No preamble, no code fences.`;
+
+  try {
+    const raw = await callClaude(system, user);
+    const parsed = parseDraft(raw);
+    setValue('smart-subject', parsed.subject || '');
+    setValue('smart-body', parsed.body || '');
+    SEND_CTX.subject = parsed.subject || '';
+    SEND_CTX.body = parsed.body || '';
+    status.textContent = 'Generated ✓';
+    toast('AI draft ready — review and edit before sending', 'ok');
+  } catch (e) {
+    console.error(e);
+    status.textContent = '';
+    toast('AI generate failed: ' + (e.message || e), 'bad');
+  } finally {
+    btn.disabled = false;
+    status.textContent = '';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SEND NOW
+// ═══════════════════════════════════════════════════════════════
+async function sendNow() {
+  const ctx = SEND_CTX; if (!ctx) return;
+  if (!SETTINGS.gmailConnected) { toast('Connect Gmail in Setup first', 'bad'); closeModal('mv-send'); return; }
+
+  const btn = document.getElementById('btn-send-now');
+  btn.disabled = true;
+  let sent = 0, failed = 0, total = 0;
+
+  if (ctx.mode === 'template') {
+    const seq = SEQUENCES[ctx.seqId];
+    total = ctx.recipients.length;
+    for (const r of ctx.recipients) {
+      const subject = personalise(seq.initial.subject, r.slug);
+      const body = personalise(seq.initial.body, r.slug);
+      try {
+        await gmailSend(r.emails, subject, body, SETTINGS.senderName);
+        logSend({ client: r.slug, template: ctx.seqId, step: ctx.step || 'initial', subject, body, recipients: r.emails, status: 'sent' });
+        sent++;
+      } catch (e) {
+        console.error(e);
+        logSend({ client: r.slug, template: ctx.seqId, step: ctx.step || 'initial', subject, body, recipients: r.emails, status: 'failed', error: String(e.message || e) });
+        failed++;
+      }
+      btn.textContent = `Sending… ${sent+failed}/${total}`;
+    }
+  } else if (ctx.mode === 'smart') {
+    // Smart mode: one subject + body, sent to every selected client,
+    // personalised per client at send time.
+    total = ctx.recipients.length;
+    for (const r of ctx.recipients) {
+      const subject = personalise(ctx.subject, r.slug);
+      const body = personalise(ctx.body, r.slug);
+      try {
+        await gmailSend(r.emails, subject, body, SETTINGS.senderName);
+        logSend({ client: r.slug, template: 'smart', step: 'initial', subject, body, recipients: r.emails, status: 'sent' });
+        sent++;
+      } catch (e) {
+        console.error(e);
+        logSend({ client: r.slug, template: 'smart', step: 'initial', subject, body, recipients: r.emails, status: 'failed', error: String(e.message || e) });
+        failed++;
+      }
+      btn.textContent = `Sending… ${sent+failed}/${total}`;
+    }
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Send now';
+  closeModal('mv-send');
+  if (failed) toast(`${sent} sent · ${failed} failed`, 'bad');
+  else toast(`${sent} email${sent!==1?'s':''} sent`, 'ok');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ACTIVITY PAGE
+// ═══════════════════════════════════════════════════════════════
+function relativeTime(ts) {
+  const diff = Date.now() - ts;
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return mins + 'm ago';
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return hrs + 'h ago';
+  const days = Math.floor(hrs / 24);
+  if (days < 7) return days + 'd ago';
+  const weeks = Math.floor(days / 7);
+  if (weeks < 5) return weeks + 'w ago';
+  return new Date(ts).toLocaleDateString();
+}
+
+function fullTime(ts) {
+  const d = new Date(ts);
+  return d.toLocaleString();
+}
+
+function stepLabel(step) {
+  return ({ initial: 'Initial', fup1: '+1 day', fup2: '+8 days' })[step] || step;
+}
+
+function templateLabel(tpl) {
+  const builtinNames = { competitions: 'Competitions', rewards: 'Rewards', risk_reports: 'Risk Reports', partner: 'Partner Intro', silent: 'Silent Check-in', smart: 'Smart (one-off)' };
+  if (builtinNames[tpl]) return builtinNames[tpl];
+  // Custom template — read from SEQUENCES
+  const seq = SEQUENCES && SEQUENCES[tpl];
+  if (seq && seq.name) return seq.name + (seq.isCustom ? ' (custom)' : '');
+  return tpl;
+}
+
+function renderActivity() {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const weekAgo = Date.now() - 7 * 86400000;
+  const sentOnly = ACTIVITY.filter(a => a.status === 'sent');
+  setText('act-total', sentOnly.length);
+  setText('act-today', sentOnly.filter(a => a.ts >= today.getTime()).length);
+  setText('act-week', sentOnly.filter(a => a.ts >= weekAgo).length);
+  setText('act-failed', ACTIVITY.filter(a => a.status === 'failed').length);
+
+  const due = allDueFollowups();
+  setText('act-due', due.length);
+  setText('cn-activity', ACTIVITY.length);
+
+  const dueCard = byId('due-card');
+  if (dueCard) {
+    dueCard.style.display = due.length ? 'block' : 'none';
+    const dueBody = byId('due-tbody');
+    if (dueBody) {
+      dueBody.innerHTML = due.map(d => {
+        const daysAgo = Math.floor((Date.now() - d.initialTs) / 86400000);
+        return `
+          <tr>
+            <td><span class="cname">${d.client}</span></td>
+            <td>${templateLabel(d.template)}</td>
+            <td><span class="step-chip ${d.step}">${stepLabel(d.step)}</span></td>
+            <td style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--mu)">${fullTime(d.initialTs)}</td>
+            <td style="font-family:'JetBrains Mono',monospace;font-size:11px" class="${daysAgo >= 14 ? 'overdue' : ''}">${daysAgo}d</td>
+            <td><button class="btn bp bsm" onclick="sendSingleFollowup('${d.client}','${d.template}','${d.step}')">Send now</button></td>
+          </tr>`;
+      }).join('');
+    }
+  }
+
+  const q = (byId('act-q')?.value || '').toLowerCase();
+  const tplF = byId('act-template-filter')?.value || '';
+  const stepF = byId('act-step-filter')?.value || '';
+  const statusF = byId('act-status-filter')?.value || '';
+  const filtered = ACTIVITY
+    .filter(a => !q || a.client.toLowerCase().includes(q) || (a.subject||'').toLowerCase().includes(q))
+    .filter(a => !tplF || a.template === tplF)
+    .filter(a => !stepF || a.step === stepF)
+    .filter(a => !statusF || a.status === statusF)
+    .sort((a, b) => b.ts - a.ts);
+
+  setText('act-visible-count', `${filtered.length} visible`);
+
+  const tbody = byId('act-tbody');
+  if (!tbody) return;
+  if (!filtered.length) {
+    tbody.innerHTML = '<tr><td colspan="8" class="empty-state"><div class="ei">Nothing sent yet</div><div>Send some emails from the Clients tab — they all show up here.</div></td></tr>';
+    return;
+  }
+  tbody.innerHTML = filtered.map(a => {
+    const recipCount = (a.recipients || []).length;
+    const recipStr = recipCount === 1 ? a.recipients[0] : `${a.recipients[0]} +${recipCount-1}`;
+    return `
+      <tr data-act-id="${a.id}">
+        <td style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--mu)" title="${fullTime(a.ts)}">${relativeTime(a.ts)}</td>
+        <td><span class="cname">${a.client}</span></td>
+        <td>${templateLabel(a.template)}</td>
+        <td><span class="step-chip ${a.step}">${stepLabel(a.step)}</span></td>
+        <td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(a.subject||'')}</td>
+        <td style="text-align:center"><span class="status-pill ${a.status}">${a.status}</span></td>
+        <td style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--mu)" title="${(a.recipients||[]).join(', ')}">${escapeHtml(recipStr)}</td>
+        <td><button class="btx" onclick="showActivityDetail('${a.id}')" title="View">⤢</button></td>
+      </tr>`;
+  }).join('');
+}
+
+function showActivityDetail(id) {
+  const a = ACTIVITY.find(x => x.id === id);
+  if (!a) return;
+  byId('mv-act-sub').textContent = `${a.client} · ${templateLabel(a.template)} · ${stepLabel(a.step)}`;
+  byId('mv-act-body').innerHTML = `
+    <div style="font-size:11px;color:var(--mu);margin-bottom:14px;font-family:'JetBrains Mono',monospace">
+      Sent ${fullTime(a.ts)} · Status: <span class="status-pill ${a.status}" style="margin-left:4px">${a.status}</span>
+      ${a.error ? `<div style="color:var(--bad);margin-top:6px">Error: ${escapeHtml(a.error)}</div>` : ''}
+    </div>
+    <div class="pv-preview">
+      <div class="pv-head">
+        <div style="display:flex;flex-direction:column;gap:3px">
+          <div><strong style="color:var(--tx)">To:</strong> ${escapeHtml((a.recipients||[])[0] || '')}</div>
+          ${(a.recipients||[]).length > 1 ? `<div><strong style="color:var(--tx)">Cc:</strong> ${escapeHtml((a.recipients||[]).slice(1).join(', '))}</div>` : ''}
+          <div><strong style="color:var(--tx)">Subject:</strong> ${escapeHtml(a.subject||'')}</div>
+        </div>
+      </div>
+      <div class="pv-body">${escapeHtml(a.body||'')}</div>
+    </div>
+  `;
+  byId('mv-act-detail').classList.add('show');
+}
+
+async function sendSingleFollowup(client, template, step) {
+  if (!SETTINGS.gmailConnected) { toast('Connect Gmail in Setup first', 'bad'); return; }
+  const seq = SEQUENCES[template]; if (!seq) { toast('Unknown template', 'bad'); return; }
+  const stepData = seq[step]; if (!stepData) { toast('Step not found', 'bad'); return; }
+  const c = getContact(client);
+  if (!c.emails.length) { toast('No email for ' + client, 'bad'); return; }
+  if (!confirm(`Send ${stepLabel(step)} follow-up to ${client}?`)) return;
+  const subject = personalise(stepData.subject, client);
+  const body = personalise(stepData.body, client);
+  try {
+    await gmailSend(c.emails, subject, body, SETTINGS.senderName);
+    logSend({ client, template, step, subject, body, recipients: c.emails, status: 'sent' });
+    toast(`${stepLabel(step)} sent to ${client}`, 'ok');
+    renderActivity();
+  } catch (e) {
+    console.error(e);
+    logSend({ client, template, step, subject, body, recipients: c.emails, status: 'failed', error: String(e.message || e) });
+    toast('Send failed: ' + (e.message || e), 'bad');
+    renderActivity();
+  }
+}
+
+async function showFollowupPlanModal() {
+  const due = allDueFollowups();
+  if (!due.length) { toast('No follow-ups due', 'ok'); return; }
+  if (!confirm(`Send all ${due.length} due follow-ups right now?\n\nEach will be logged and personalised per client. Cross-client isolation applies.`)) return;
+  if (!SETTINGS.gmailConnected) { toast('Connect Gmail in Setup first', 'bad'); return; }
+  let sent = 0, failed = 0;
+  for (const d of due) {
+    const seq = SEQUENCES[d.template]; if (!seq) continue;
+    const stepData = seq[d.step]; if (!stepData) continue;
+    const c = getContact(d.client);
+    if (!c.emails.length) { failed++; continue; }
+    const subject = personalise(stepData.subject, d.client);
+    const body = personalise(stepData.body, d.client);
+    try {
+      await gmailSend(c.emails, subject, body, SETTINGS.senderName);
+      logSend({ client: d.client, template: d.template, step: d.step, subject, body, recipients: c.emails, status: 'sent' });
+      sent++;
+    } catch (e) {
+      console.error(e);
+      logSend({ client: d.client, template: d.template, step: d.step, subject, body, recipients: c.emails, status: 'failed', error: String(e.message || e) });
+      failed++;
+    }
+  }
+  renderActivity();
+  if (failed) toast(`${sent} sent, ${failed} failed`, 'bad');
+  else toast(`${sent} follow-up${sent!==1?'s':''} sent`, 'ok');
+}
+
+function exportActivity() {
+  if (!ACTIVITY.length) { toast('Nothing to export', 'bad'); return; }
+  const headers = ['timestamp','datetime','client','template','step','status','subject','recipients','error'];
+  const rows = ACTIVITY.slice().sort((a,b) => b.ts - a.ts).map(a => [
+    a.ts,
+    new Date(a.ts).toISOString(),
+    a.client,
+    a.template,
+    a.step,
+    a.status,
+    a.subject || '',
+    (a.recipients || []).join('; '),
+    a.error || ''
+  ].map(v => `"${String(v).replace(/"/g,'""')}"`).join(','));
+  const csv = headers.join(',') + '\n' + rows.join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `tts_activity_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  toast('Activity exported', 'ok');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// REVENUE PAGE
+// ═══════════════════════════════════════════════════════════════
+function updateScenario() {
+  const a = parseInt(byId('scen-accts')?.value, 10);
+  const c = parseFloat(byId('scen-comp')?.value);
+  const v = parseInt(byId('scen-conv')?.value, 10);
+  if (!isNaN(a) && a >= 0) SETTINGS.defaultAccounts = a;
+  if (!isNaN(c) && c >= 0) SETTINGS.competitionsPerMonth = c;
+  if (!isNaN(v) && v >= 0 && v <= 100) SETTINGS.conversionRate = v;
+  localStorage.setItem(LS_SETTINGS, JSON.stringify(SETTINGS));
+  renderRevenue();
+}
+
+function applyScenario(name) {
+  const presets = {
+    conservative: { accts: 300, comp: 0.5, conv: 25 },
+    baseline:     { accts: 500, comp: 1,   conv: 50 },
+    aggressive:   { accts: 800, comp: 2,   conv: 75 }
+  };
+  const p = presets[name];
+  if (!p) return;
+  SETTINGS.defaultAccounts = p.accts;
+  SETTINGS.competitionsPerMonth = p.comp;
+  SETTINGS.conversionRate = p.conv;
+  localStorage.setItem(LS_SETTINGS, JSON.stringify(SETTINGS));
+  setValue('scen-accts', p.accts);
+  setValue('scen-comp', p.comp);
+  setValue('scen-conv', p.conv);
+  renderRevenue();
+  toast(`Applied ${name} scenario`, 'ok');
+}
+
+function updatePerClientAccounts(slug, val) {
+  const c = CONTACTS[slug] = CONTACTS[slug] || { contact:'', emails:[], pm:'' };
+  const n = parseInt(val, 10);
+  if (!val || !val.trim()) {
+    delete c.accounts;
+  } else if (!isNaN(n) && n >= 0) {
+    c.accounts = n;
+  }
+  saveContacts();
+  renderRevenue();
+}
+
+function renderRevenue() {
+  // Populate scenario inputs from SETTINGS (in case of first load or scenario preset)
+  setValue('scen-accts', SETTINGS.defaultAccounts || 500);
+  setValue('scen-comp',  SETTINGS.competitionsPerMonth !== undefined ? SETTINGS.competitionsPerMonth : 1);
+  setValue('scen-conv',  SETTINGS.conversionRate !== undefined ? SETTINGS.conversionRate : 100);
+
+  // Feature breakdown
+  const riskMRR = mrrByFeature('risk_reports');
+  const compMRR = mrrByFeature('competitions');
+  const rewMRR  = mrrByFeature('rewards');
+  setText('feat-risk-amt', formatMRR(riskMRR) + '/mo');
+  setText('feat-comp-amt', formatMRR(compMRR) + '/mo');
+  setText('feat-rew-amt',  formatMRR(rewMRR)  + '/mo');
+  setText('feat-risk-count', countMissing('risk_reports'));
+  setText('feat-comp-count', countMissing('competitions'));
+  setText('feat-rew-count',  countMissing('rewards'));
+  setText('feat-comp-rate',  compsPerMonth());
+
+  // Totals
+  const totalMRR = riskMRR + compMRR + rewMRR;
+  const conv = conversionRate();
+  const realisticMRR = Math.round(totalMRR * conv / 100);
+  setText('total-mrr', formatMRR(totalMRR));
+  setText('total-arr', formatMRR(totalMRR * 12));
+  setText('total-conv', formatMRR(realisticMRR));
+  setText('conv-display', conv);
+
+  // Sidebar count
+  setText('cn-revenue', formatMRR(totalMRR));
+
+  // Top bar subtitle (only when on this page — harmless otherwise)
+  setText('rev-sub', `${DATA.length} clients · ${formatMRR(totalMRR)}/mo max · ${formatMRR(realisticMRR)}/mo at ${conv}%`);
+
+  // Per-client opportunity table
+  const rows = DATA.slice().map(d => ({
+    client: d.client,
+    missing: REV_FEATS.filter(f => !d[f]),
+    accts: accountsFor(d.client),
+    hasOverride: !!(CONTACTS[d.client] && CONTACTS[d.client].accounts),
+    mrr: potentialMRR(d.client)
+  })).sort((a, b) => b.mrr - a.mrr);
+
+  const featLabels = { competitions: 'Comp', rewards: 'Rwd', risk_reports: 'Risk', university: 'Uni' };
+  const tbody = byId('rev-tbody');
+  if (tbody) {
+    tbody.innerHTML = rows.map(r => {
+      const missingStr = r.missing.length
+        ? r.missing.map(f => `<span class="miss-chip">${featLabels[f] || f}</span>`).join(' ')
+        : '<span style="color:var(--mu2);font-size:10px;font-style:italic">all activated</span>';
+      return `
+        <tr>
+          <td><span class="cname">${r.client}</span></td>
+          <td>${missingStr}</td>
+          <td style="text-align:right">
+            <input class="ie mono ${r.hasOverride ? 'override' : ''}" type="number" min="0" step="50"
+                   value="${r.hasOverride ? r.accts : ''}"
+                   placeholder="${SETTINGS.defaultAccounts || 500}"
+                   onchange="updatePerClientAccounts('${r.client}', this.value)"
+                   style="text-align:right;min-width:70px">
+          </td>
+          <td style="text-align:right" class="mrr-cell ${r.mrr >= 1000 ? 'high' : ''}">${formatMRR(r.mrr)}</td>
+          <td style="text-align:right" class="mrr-cell">${formatMRR(r.mrr * 12)}</td>
+        </tr>`;
+    }).join('');
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// GMAIL
+// ═══════════════════════════════════════════════════════════════
+let _gmailToken = null;
+let _gmailEmail = null;
+let _tokenClient = null;
+
+function loadGmailSDK(done) {
+  if (window.gapi && window.gapi.client && window.gapi.client.gmail && window.google?.accounts?.oauth2) return done();
+  const s1 = document.createElement('script');
+  s1.src = 'https://apis.google.com/js/api.js';
+  s1.onload = () => {
+    gapi.load('client', async () => {
+      await gapi.client.init({ discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/gmail/v1/rest'] });
+      const s2 = document.createElement('script');
+      s2.src = 'https://accounts.google.com/gsi/client';
+      s2.onload = () => done();
+      document.head.appendChild(s2);
+    });
+  };
+  document.head.appendChild(s1);
+}
+
+function toggleGmail() {
+  if (SETTINGS.gmailConnected) {
+    if (_gmailToken && window.google?.accounts?.oauth2) google.accounts.oauth2.revoke(_gmailToken, () => {});
+    _gmailToken = null; _gmailEmail = null;
+    SETTINGS.gmailConnected = false;
+    localStorage.setItem(LS_SETTINGS, JSON.stringify(SETTINGS));
+    updateGmailUI(); toast('Gmail disconnected'); return;
+  }
+  const cid = document.getElementById('oauth-client-id').value.trim();
+  if (!cid) { toast('Paste your OAuth Client ID first', 'bad'); return; }
+  SETTINGS.oauthClientId = cid; saveSettings();
+  loadGmailSDK(() => {
+    _tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: cid,
+      scope: 'https://www.googleapis.com/auth/gmail.send email',
+      callback: (resp) => {
+        if (resp.error) { toast('Gmail auth failed: ' + resp.error, 'bad'); return; }
+        _gmailToken = resp.access_token;
+        gapi.client.setToken({ access_token: _gmailToken });
+        fetch('https://www.googleapis.com/oauth2/v1/userinfo', { headers: { Authorization: `Bearer ${_gmailToken}` } })
+          .then(r => r.json())
+          .then(u => {
+            _gmailEmail = u.email;
+            SETTINGS.gmailConnected = true;
+            localStorage.setItem(LS_SETTINGS, JSON.stringify(SETTINGS));
+            updateGmailUI(); toast('Gmail connected: ' + u.email, 'ok');
+          });
+      }
+    });
+    _tokenClient.requestAccessToken();
+  });
+}
+
+async function gmailSend(emails, subject, body, fromName) {
+  if (!window.gapi?.client?.gmail) throw new Error('gapi not loaded');
+  const list = Array.isArray(emails) ? emails.filter(Boolean) : [emails].filter(Boolean);
+  if (!list.length) throw new Error('no emails');
+  // First email = primary (To). Rest = CC so within-company stakeholders
+  // see each other on the thread (standard B2B behaviour).
+  // Cross-client isolation is handled at the caller: each client is a
+  // separate gmailSend() call, so clients NEVER see other clients.
+  const [primary, ...ccs] = list;
+  const headers = [
+    `To: ${primary}`,
+    ccs.length ? `Cc: ${ccs.join(', ')}` : '',
+    fromName ? `From: ${fromName} <${_gmailEmail || 'me'}>` : '',
+    `Subject: ${subject}`,
+    'Content-Type: text/plain; charset=UTF-8',
+    '',
+    body
+  ].filter(Boolean).join('\r\n');
+  const raw = btoa(unescape(encodeURIComponent(headers))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+  return gapi.client.gmail.users.messages.send({ userId: 'me', resource: { raw } });
+}
+
+function updateGmailUI() {
+  const dot = document.getElementById('gmail-dot');
+  const state = document.getElementById('gmail-state');
+  const txT = document.getElementById('gmail-tx-t');
+  const btn = document.getElementById('gmail-btn');
+  if (SETTINGS.gmailConnected && _gmailEmail) {
+    dot.classList.add('on'); state.textContent = 'Connected';
+    txT.textContent = 'Connected · ' + _gmailEmail;
+    btn.textContent = 'Disconnect'; btn.classList.remove('bp'); btn.classList.add('bo');
+  } else {
+    dot.classList.remove('on'); state.textContent = 'Not connected';
+    txT.textContent = 'Not connected';
+    btn.textContent = 'Connect Gmail'; btn.classList.add('bp'); btn.classList.remove('bo');
+  }
+}
+
+function updateAIUI() {
+  const dot = document.getElementById('ai-dot');
+  const state = document.getElementById('ai-state');
+  const txT = document.getElementById('ai-tx-t');
+  if (SETTINGS.claudeKey) {
+    dot.classList.add('ai');
+    state.textContent = 'Key set · ' + SETTINGS.claudeModel;
+    txT.textContent = 'Ready · key saved locally';
+  } else {
+    dot.classList.remove('ai');
+    state.textContent = 'No key set';
+    txT.textContent = 'No key set';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MODAL + TOAST HELPERS
+// ═══════════════════════════════════════════════════════════════
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+document.querySelectorAll('.mv').forEach(m => m.addEventListener('click', e => { if (e.target === m) m.classList.remove('show'); }));
+
+let _toastTimer;
+function toast(msg, cls = '') {
+  const el = document.getElementById('toast');
+  setText('toast-msg', msg);
+  el.classList.remove('ok','bad');
+  if (cls) el.classList.add(cls);
+  el.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => el.classList.remove('show'), 2600);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════
+loadAll();
+setValue('oauth-client-id', SETTINGS.oauthClientId || '');
+setValue('sender-name', SETTINGS.senderName || '');
+setValue('booking-link', SETTINGS.bookingLink || '');
+setValue('claude-key', SETTINGS.claudeKey || '');
+setValue('claude-model', SETTINGS.claudeModel || 'claude-sonnet-4-6');
+setValue('ai-tone', SETTINGS.aiTone || DEFAULT_TONE);
+setText('origin-uri', window.location.origin === 'null' ? 'file://' : window.location.origin);
+populateSequenceDropdown();
+populateActivityFilter();
+render();
+renderSeqList();
+renderActivity();  // populate sidebar count, due badge
+updateGmailUI();
+updateAIUI();
+</script>
+</body>
+</html>
